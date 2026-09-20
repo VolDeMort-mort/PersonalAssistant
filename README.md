@@ -1,1 +1,3 @@
 # PersonalAssistant
+Pet project that include clean architecture with event driven architecture
+More to follow...
