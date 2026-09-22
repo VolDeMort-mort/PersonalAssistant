@@ -1,9 +1,11 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using PersonalAssistant.Presentation.Services;
-using Telegram.Bot;
+using PersonalAssistant.Application.Constants;
+using PersonalAssistant.Application.Interfaces;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+
+
 namespace PersonalAssistant.Presentation.Controllers;
 
 
@@ -12,32 +14,32 @@ namespace PersonalAssistant.Presentation.Controllers;
 public class TelegramController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly JournalSessionManager _sessionManager;
-    private readonly ITelegramBotClient _botClient;
+    private readonly IJournalSessionManager _sessionManager;
+    private readonly IBotNotifService _notifService;
 
-    public TelegramController(IMediator mediator, JournalSessionManager sessionManager, ITelegramBotClient botClient)
+    public TelegramController(IMediator mediator, IJournalSessionManager sessionManager, IBotNotifService botNotifService)
     {
         _mediator = mediator;
         _sessionManager = sessionManager;
-        _botClient = botClient;
+        _notifService = botNotifService;
     }
 
     [HttpPost("webhook")]
     public async Task<IActionResult> Post([FromBody] Update update)
     {
-        if (update.Type != UpdateType.Message || update.Message?.Text == null)
+        if (update.Message == null)
             return Ok();
 
         var chatId = update.Message.Chat.Id;
-        var text = update.Message.Text.ToLower() ?? "";
+        var text = update.Message.Text?.ToLower() ?? "";
 
-        if (text.StartsWith("/startjournal"))
+        if (text.StartsWith(BotConstants.Commands.StartJournal))
         {
-            await HandleJournalCommand(chatId);
+            await HandleStartJournalCommand(chatId);
         }
-        else if (text.StartsWith("/stopjournal"))
+        else if (text.StartsWith(BotConstants.Commands.StopJournal))
         {
-            await HandleStopCommand(chatId);
+            await HandleStopJournalCommand(chatId);
         }
         else if (_sessionManager.IsRecording(chatId))
         {
@@ -50,21 +52,20 @@ public class TelegramController : ControllerBase
     /// <summary>
     /// Launches a listening session
     /// </summary>
-    private async Task HandleJournalCommand(long chatId)
+    private async Task HandleStartJournalCommand(long chatId)
     {
         _sessionManager.StartSession(chatId);
-        await _botClient.SendMessage(chatId, "📖 Журнал відкрито. Я слухаю... (відправ текст, аудіо чи відео. Коли закінчиш - напиши /stop)");
+        await _notifService.SendMessageAsync(chatId, BotConstants.Messages.JournalOpened);
     }
-
 
     /// <summary>
     /// Stops listening session 
     /// </summary>
-    private async Task HandleStopCommand(long chatId)
+    private async Task HandleStopJournalCommand(long chatId)
     {
         if (!_sessionManager.IsRecording(chatId))
         {
-            await _botClient.SendMessage(chatId, "Журнал і так був закритий.");
+            await _notifService.SendMessageAsync(chatId, BotConstants.Messages.JournalAlreadyClosed);
             return;
         }
 
@@ -75,11 +76,11 @@ public class TelegramController : ControllerBase
             var command = new SaveJournalSessionCommand(sessionData.Value.SessionId, sessionData.Value.Messages);
             await _mediator.Send(command);
 
-            await _botClient.SendMessage(chatId, $"✅ Збережено повідомлень: {sessionData.Value.Messages.Count}. Аудіо/відео відправлені на обробку Whisper у фоні!");
+            await _notifService.SendMessageAsync(chatId, BotConstants.Messages.JournalSaved(sessionData.Value.Messages.Count));
         }
         else
         {
-            await _botClient.SendMessage(chatId, "Журнал зачинено. Ти нічого не записав 🤷‍♂️");
+            await _notifService.SendMessageAsync(chatId, BotConstants.Messages.JournalClosedEmpty);
         }
     }
 
@@ -88,6 +89,8 @@ public class TelegramController : ControllerBase
     /// </summary>
     private Task HandleIncomingMessage(long chatId, Message message)
     {
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] Message type received. Text: {message.Text != null}, Voice: {message.Voice != null}, Audio: {message.Audio != null}, Video: {message.Video != null}, VideoNote: {message.VideoNote != null}");
+        
         if (!string.IsNullOrEmpty(message.Text))
         {
             _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Text, message.Text, null, DateTime.UtcNow));
@@ -96,9 +99,9 @@ public class TelegramController : ControllerBase
         {
             _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Voice, null, message.Voice.FileId, DateTime.UtcNow));
         }
-        else if (message.Video != null)
+        else if (message.VideoNote != null)
         {
-            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Video, null, message.Video.FileId, DateTime.UtcNow));
+            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Video, null, message.VideoNote.FileId, DateTime.UtcNow));
         }
 
         return Task.CompletedTask;

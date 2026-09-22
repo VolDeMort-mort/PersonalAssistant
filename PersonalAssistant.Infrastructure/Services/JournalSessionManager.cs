@@ -1,8 +1,9 @@
-﻿using System.Collections.Concurrent;
+﻿using PersonalAssistant.Application.Interfaces;
+using System.Collections.Concurrent;
 
-namespace PersonalAssistant.Presentation.Services;
+namespace PersonalAssistant.Infrastracture.Services;
 
-public class JournalSessionManager
+public class JournalSessionManager: IJournalSessionManager
 {
     private class ActiveSession
     {
