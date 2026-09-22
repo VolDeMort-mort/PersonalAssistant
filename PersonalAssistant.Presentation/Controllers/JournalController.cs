@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using PersonalAssistant.Application.Features.Journal.Commands;
+using PersonalAssistant.Application.Features.Journal.Queries;
 
 namespace PersonalAssistant.Presentation.Controllers;
 
@@ -22,4 +23,14 @@ public class JournalController : ControllerBase
         var resultId = await _mediator.Send(command);
         return Ok(new { Id = resultId });
     }
+
+    [HttpGet("{date}")]
+    public async Task<IActionResult> GetByDate(DateTime date)
+    {
+        var query = new GetJournalEntriesByDateQuery(date);
+        var entries = await _mediator.Send(query);
+
+        return Ok(entries);
+    }
+
 }
