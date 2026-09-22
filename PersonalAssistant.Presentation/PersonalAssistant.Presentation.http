@@ -1,4 +1,4 @@
-@PersonalAssistant.Presentation_HostAddress = http://localhost:5227
+@PersonalAssistant.Presentation_HostAddress = http://localhost:5157
 
 GET {{PersonalAssistant.Presentation_HostAddress}}/weatherforecast/
 Accept: application/json
