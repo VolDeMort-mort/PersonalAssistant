@@ -14,7 +14,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(SaveJournalEntryCommand).Assembly));
+    cfg.RegisterServicesFromAssembly(typeof(SaveJournalSessionCommand).Assembly));
 
 
 // Connecting DB

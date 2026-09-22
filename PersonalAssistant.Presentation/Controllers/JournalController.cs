@@ -18,10 +18,10 @@ public class JournalController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> SaveEntry([FromBody] SaveJournalEntryCommand command)
+    public async Task<IActionResult> SaveEntry([FromBody] SaveJournalSessionCommand command)
     {
-        var resultId = await _mediator.Send(command);
-        return Ok(new { Id = resultId });
+        await _mediator.Send(command);
+        return Ok();
     }
 
     [HttpGet("{date}")]

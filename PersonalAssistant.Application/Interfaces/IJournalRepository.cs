@@ -12,5 +12,6 @@ public interface IJournalRepository
 {
     Task AddAsync(JournalEntry entry, CancellationToken cancellationToken);
     Task<IEnumerable<JournalEntry>> GetByDateAsync(DateTime date, CancellationToken cancellationToken);
+    Task AddRangeAsync(IEnumerable<JournalEntry> entries, CancellationToken cancellationToken = default);
 
 }

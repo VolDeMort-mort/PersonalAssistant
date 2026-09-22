@@ -1,23 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace PersonalAssistant.Domain.Entities;
 
-namespace PersonalAssistant.Domain.Entities;
+public enum MessageType
+{
+    Text,
+    Voice,
+    Video
+}
 
 public class JournalEntry
 {
-    public Guid Id { get; private set; }
-    public string Text { get; private set; }
-    public DateTime CreatedAt { get; private set; }
-    public string? EmotionTag { get; private set; }
+    public Guid Id { get; set; }
 
-    public JournalEntry(string text, string? emotionTag = null)
-    {
-        Id = Guid.NewGuid();
-        Text = text;
-        CreatedAt = DateTime.UtcNow;
-        EmotionTag = emotionTag;
-    }
+    public Guid SessionId { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+    
+    public MessageType Type { get; set; }
+
+    public string? OriginalText { get; set; }
+
+    public string? TelegramFileId { get; set; }
+
+    public string? LocalFilePath { get; set; }
+
+    public bool IsProcessed { get; set; }
+
+    public string? TranscribedText { get; set; }
 }

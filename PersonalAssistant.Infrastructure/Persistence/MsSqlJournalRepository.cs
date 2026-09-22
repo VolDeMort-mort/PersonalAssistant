@@ -25,4 +25,10 @@ public class MsSqlJournalRepository : IJournalRepository
             .Where(e => e.CreatedAt.Date == date.Date)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task AddRangeAsync(IEnumerable<JournalEntry> entries, CancellationToken cancellationToken = default)
+    {
+        await _context.JournalEntries.AddRangeAsync(entries, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }

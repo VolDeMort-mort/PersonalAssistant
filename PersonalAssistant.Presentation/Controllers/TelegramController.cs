@@ -1,6 +1,5 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using PersonalAssistant.Application.Features.Journal.Commands;
 using PersonalAssistant.Presentation.Services;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -56,7 +55,7 @@ public class TelegramController : ControllerBase
         _sessionManager.StartSession(chatId);
         await _botClient.SendMessage(chatId, "📖 Журнал відкрито. Я слухаю... (відправ текст, аудіо чи відео. Коли закінчиш - напиши /stop)");
     }
-    
+
 
     /// <summary>
     /// Stops listening session 
@@ -69,20 +68,20 @@ public class TelegramController : ControllerBase
             return;
         }
 
-        var fullJournalText = _sessionManager.EndSessionAndGetText(chatId);
+        var sessionData = _sessionManager.EndSession(chatId);
 
-        if (!string.IsNullOrWhiteSpace(fullJournalText))
+        if (sessionData != null && sessionData.Value.Messages.Any())
         {
-            var command = new SaveJournalEntryCommand(fullJournalText, "Telegram_Session");
+            var command = new SaveJournalSessionCommand(sessionData.Value.SessionId, sessionData.Value.Messages);
             await _mediator.Send(command);
-            await _botClient.SendMessage(chatId, "✅ Запис успішно збережено у щоденник!");
+
+            await _botClient.SendMessage(chatId, $"✅ Збережено повідомлень: {sessionData.Value.Messages.Count}. Аудіо/відео відправлені на обробку Whisper у фоні!");
         }
         else
         {
             await _botClient.SendMessage(chatId, "Журнал зачинено. Ти нічого не записав 🤷‍♂️");
         }
     }
-
 
     /// <summary>
     /// Listens and records messages from user
@@ -91,17 +90,18 @@ public class TelegramController : ControllerBase
     {
         if (!string.IsNullOrEmpty(message.Text))
         {
-            _sessionManager.AddMessage(chatId, message.Text);
+            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Text, message.Text, null, DateTime.UtcNow));
         }
-        else if (message.Voice != null || message.Audio != null)
+        else if (message.Voice != null)
         {
-            _sessionManager.AddMessage(chatId, "[Аудіоповідомлення - очікує підключення Whisper]");
+            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Voice, null, message.Voice.FileId, DateTime.UtcNow));
         }
-        else if (message.Video != null || message.VideoNote != null)
+        else if (message.Video != null)
         {
-            _sessionManager.AddMessage(chatId, "[Відеоповідомлення - очікує підключення Whisper]");
+            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Video, null, message.Video.FileId, DateTime.UtcNow));
         }
 
         return Task.CompletedTask;
     }
+
 }
