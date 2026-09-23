@@ -8,10 +8,12 @@ namespace PersonalAssistant.Application.Features.Journal.Commands;
 public class SaveJournalSessionCommandHandler : IRequestHandler<SaveJournalSessionCommand>
 {
     private readonly IJournalRepository _repository;
+    private readonly IAudioProcessQueue _queue;
 
-    public SaveJournalSessionCommandHandler(IJournalRepository repository)
+    public SaveJournalSessionCommandHandler(IJournalRepository repository, IAudioProcessQueue queue)
     {
         _repository = repository;
+        _queue = queue;
     }
 
     public async Task Handle(SaveJournalSessionCommand request, CancellationToken cancellationToken)
@@ -28,5 +30,10 @@ public class SaveJournalSessionCommandHandler : IRequestHandler<SaveJournalSessi
         }).ToList();
 
         await _repository.AddRangeAsync(entries, cancellationToken);
+
+        foreach (var entry in entries.Where(e => e.Type == MessageType.Voice || e.Type == MessageType.Video))
+        {
+            await _queue.EnqueueAsync(entry.Id, cancellationToken);
+        }
     }
 }

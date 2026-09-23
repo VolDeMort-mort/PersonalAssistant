@@ -1,6 +1,4 @@
-﻿using PersonalAssistant.Application.Features.Journal.Commands;
-
-namespace PersonalAssistant.Application.Interfaces;
+﻿namespace PersonalAssistant.Application.Interfaces;
 
 public interface IJournalSessionManager
 {

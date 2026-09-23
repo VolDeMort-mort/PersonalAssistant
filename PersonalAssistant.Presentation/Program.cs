@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using PersonalAssistant.Infrastructure.Services;
 using PersonalAssistant.Infrastracture.Services;
+using PersonalAssistant.Infrastructure.Workers;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,16 +21,23 @@ builder.Services.AddMediatR(cfg =>
 // Connecting DB
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddScoped<IJournalRepository, MsSqlJournalRepository>();
+builder.Services.AddScoped<IJournalRepository, JournalRepository>();
 
 // Connecting Telegram Bot
 builder.Services.AddScoped<IBotNotifService, BotNotifService>();
-builder.Services.AddSingleton<IJournalSessionManager, JournalSessionManager>(); 
+builder.Services.AddScoped<IBotMediaDownloader, BotMediaDownloader>();
+builder.Services.AddSingleton<IAudioProcessQueue, AudioProcessingQueue>();
+
 var botToken = builder.Configuration["TelegramBot:Token"];
 builder.Services.AddHttpClient("tgwebhook")
     .AddTypedClient<ITelegramBotClient>(httpClient => new TelegramBotClient(botToken, httpClient));
 
+// Connecting other services
+builder.Services.AddSingleton<IJournalSessionManager, JournalSessionManager>();
 
+
+// Background worker (downloads audio/video)
+builder.Services.AddHostedService<AudioProcessWorker>();
 
 var app = builder.Build();
 

@@ -1,6 +1,4 @@
-﻿
-namespace PersonalAssistant.Application.Interfaces;
-
+﻿namespace PersonalAssistant.Application.Interfaces;
 
 public interface IBotNotifService
 {
