@@ -1,6 +1,6 @@
 @PersonalAssistant.Presentation_HostAddress = http://localhost:5157
 
-GET {{PersonalAssistant.Presentation_HostAddress}}/weatherforecast/
+GET http://localhost:5000/api/Journal/2026-09-22
 Accept: application/json
 
 ###

@@ -7,19 +7,24 @@ namespace PersonalAssistant.Infrastructure.Persistence;
 
 public class AppDbContext : DbContext
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+    {
+    }
+
     public DbSet<JournalEntry> JournalEntries { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Налаштовуємо таблицю
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<JournalEntry>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Text).IsRequired();
-            entity.Property(e => e.EmotionTag).HasMaxLength(50);
-        });
 
-        base.OnModelCreating(modelBuilder);
+            entity.Property(e => e.OriginalText).IsRequired(false);
+            entity.Property(e => e.TelegramFileId).IsRequired(false);
+            entity.Property(e => e.LocalFilePath).IsRequired(false);
+            entity.Property(e => e.TranscribedText).IsRequired(false);
+        });
     }
 }

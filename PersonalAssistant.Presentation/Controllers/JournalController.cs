@@ -2,6 +2,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using PersonalAssistant.Application.Features.Journal.Commands;
+using PersonalAssistant.Application.Features.Journal.Queries;
 
 namespace PersonalAssistant.Presentation.Controllers;
 
@@ -17,9 +18,19 @@ public class JournalController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> SaveEntry([FromBody] SaveJournalEntryCommand command)
+    public async Task<IActionResult> SaveEntry([FromBody] SaveJournalSessionCommand command)
     {
-        var resultId = await _mediator.Send(command);
-        return Ok(new { Id = resultId });
+        await _mediator.Send(command);
+        return Ok();
     }
+
+    [HttpGet("{date}")]
+    public async Task<IActionResult> GetByDate(DateTime date)
+    {
+        var query = new GetJournalEntriesByDateQuery(date);
+        var entries = await _mediator.Send(query);
+
+        return Ok(entries);
+    }
+
 }

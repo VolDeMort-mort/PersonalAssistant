@@ -4,6 +4,8 @@ obj/
 *.sln 
 */*.csproj
 *.csproj.user
-*.
+*.png
 
-appsettings.Development.json
+**/appsettings.Development.json
+**/appsettings.json
+
