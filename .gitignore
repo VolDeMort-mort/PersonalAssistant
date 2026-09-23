@@ -7,5 +7,4 @@ obj/
 *.png
 
 **/appsettings.Development.json
-**/appsettings.json
-
+**/DownloadedMedia/
