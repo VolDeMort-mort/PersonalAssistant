@@ -36,19 +36,27 @@ namespace PersonalAssistant.Infrastructure.Services
                     cancellationToken: cancellationToken
                 );
             }
-            catch (ApiRequestException) 
+            catch (ApiRequestException ex) 
             {
-                await SendMessageAsync(
-                    chatId: chatId,
-                    text: text,
-                    replyMarkup: replyMarkup,
-                    cancellationToken: cancellationToken);
+                if (ex.Message.Contains("message is not modified"))
+                {
+                    await SendMessageAsync(chatId, text, replyMarkup, cancellationToken);
+                    return;
+                }
+
+                if (ex.Message.Contains("message to edit not found") || ex.Message.Contains("message can't be edited"))
+                {
+                    await SendMessageAsync(chatId, text, replyMarkup, cancellationToken);
+                    return;
+                }
+
+                _logger.LogWarning(ex, $"[BotNotifService] Telegram API error while editing message in chat {chatId}");
             }
-            catch(Exception ex) {
-                _logger.LogWarning($"Catched an {ex}");
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, $"[BotNotifService] Telegram API error while editing message in chat {chatId}");
             }
 
         }
-
     }
 }
