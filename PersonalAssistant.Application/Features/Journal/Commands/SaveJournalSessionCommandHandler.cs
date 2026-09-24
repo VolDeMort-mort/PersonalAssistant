@@ -21,6 +21,7 @@ public class SaveJournalSessionCommandHandler : IRequestHandler<SaveJournalSessi
         var entries = request.Messages.Select(m => new JournalEntry
         {
             Id = Guid.NewGuid(),
+            ChatId = request.ChatId,
             SessionId = request.SessionId,
             CreatedAt = m.CreatedAt,
             Type = (MessageType)m.Type,
