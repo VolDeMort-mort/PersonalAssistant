@@ -34,6 +34,7 @@ builder.Services.AddHttpClient("tgwebhook")
 
 // Connecting other services
 builder.Services.AddSingleton<IJournalSessionManager, JournalSessionManager>();
+builder.Services.AddScoped<IUserStateManager, UserStateManager>();
 
 
 // Background worker (downloads audio/video)
