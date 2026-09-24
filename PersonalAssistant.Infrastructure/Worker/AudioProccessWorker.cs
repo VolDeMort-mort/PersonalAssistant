@@ -96,10 +96,9 @@ public class AudioProcessWorker : BackgroundService
             if (localPath != null)
             {
                 // Saving localpath to db
-                await repository.UpdateFilePathAsync(entryId, localPath, stoppingToken);
-                _logger.LogInformation($"[AudioProcessWorker] File {entryId.ToString()[..8]} was downloaded: {localPath.ToString()[16..]}");
-
-                entry.LocalFilePath = localPath;
+                entry.MarkDownloaded(localPath);
+                await repository.UpdateAsync(entry, stoppingToken);
+                _logger.LogInformation($"[AudioProcessWorker] File {entryId.ToString()[..8]} was downloaded: {localPath[16..]}");
 
                 await mediator.Publish(new JournalEntryStored(entry.Id, entry.ChatId, entry.MessageId), stoppingToken);
             }
