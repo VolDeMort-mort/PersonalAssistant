@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PersonalAssistant.Application.Constants;
 using PersonalAssistant.Application.Interfaces;
+using PersonalAssistant.Presentation.Helpers;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
@@ -16,56 +17,150 @@ public class TelegramController : ControllerBase
     private readonly IMediator _mediator;
     private readonly IJournalSessionManager _sessionManager;
     private readonly IBotNotifService _notifService;
+    public readonly IUserStateManager _stateManager;
 
-    public TelegramController(IMediator mediator, IJournalSessionManager sessionManager, IBotNotifService botNotifService)
+    public TelegramController(IMediator mediator,
+        IJournalSessionManager sessionManager, 
+        IBotNotifService botNotifService, 
+        IUserStateManager stateManager)
     {
         _mediator = mediator;
         _sessionManager = sessionManager;
         _notifService = botNotifService;
+        _stateManager = stateManager;
     }
 
     [HttpPost("webhook")]
     public async Task<IActionResult> Post([FromBody] Update update)
     {
-        if (update.Message == null)
+        if (update.Type == UpdateType.CallbackQuery && update.CallbackQuery?.Message != null)
+        {
+            var chatId = update.CallbackQuery.Message.Chat.Id;
+            var messageId = update.CallbackQuery.Message.MessageId;
+            var payload = update.CallbackQuery.Data;
+
+            switch (payload)
+            {
+                case BotConstants.Payloads.NavRoot:
+                    await HandleMenuCommand(chatId, messageId);
+                    break;
+
+                case BotConstants.Payloads.NavJournal:
+                    await _notifService.EditMessageAsync(
+                        chatId, messageId,
+                        BotConstants.Message.MsgJournalMenu,
+                        MenuBuilder.GetJournalMenu());
+                    break;
+                
+                case BotConstants.Payloads.NavPlanner:
+                    await _notifService.EditMessageAsync(
+                        chatId, messageId,
+                        BotConstants.Message.MsgNotImplementedFeature,
+                        MenuBuilder.GetNotImplementedFeature());
+                    break;
+
+                case BotConstants.Payloads.NavScraper:
+                    await _notifService.EditMessageAsync(
+                        chatId, messageId,
+                        BotConstants.Message.MsgNotImplementedFeature,
+                        MenuBuilder.GetNotImplementedFeature());
+                    break;
+
+                case BotConstants.Payloads.NavJournalStart:
+                    await HandleStartJournalCommand(chatId, messageId);
+                    break;
+
+                //case BotConstants.Payloads.NavJournalRecording:
+                //    await _notifService.EditMessageAsync(
+                //        chatId, messageId,
+                //        BotConstants.Message.MsgJournalRecording,
+                //        MenuBuilder.GetJournalRecording());
+                //    break;
+
+                case BotConstants.Payloads.NavJournalRecorded:
+                    await HandleSaveJournalCommand(chatId, messageId);
+                    break;
+
+                case BotConstants.Payloads.NavJournalCancelRecord:
+                    await HandleCancelJournalCommand(chatId, messageId);
+                    break;
+
+
+            }
+
             return Ok();
-
-        var chatId = update.Message.Chat.Id;
-        var text = update.Message.Text?.ToLower() ?? "";
-
-        if (text.StartsWith(BotConstants.Commands.StartJournal))
-        {
-            await HandleStartJournalCommand(chatId);
         }
-        else if (text.StartsWith(BotConstants.Commands.StopJournal))
+
+        if (update.Type == UpdateType.Message && update.Message != null)
         {
-            await HandleStopJournalCommand(chatId);
-        }
-        else if (_sessionManager.IsRecording(chatId))
-        {
-            await HandleIncomingMessage(chatId, update.Message);
+            var chatId = update.Message.Chat.Id;
+            var messageId = update.Message?.MessageId ?? 0;
+            var text = update.Message.Text?.ToLower() ?? "";
+
+            
+            if (text.StartsWith(BotConstants.Commands.MainMenu)) {
+                await HandleMenuCommand(chatId, messageId);
+            }
+            else if (_sessionManager.IsRecording(chatId))
+            {
+                await HandleIncomingMessage(chatId, update.Message);
+            }
         }
         return Ok();
     }
 
 
-    /// <summary>
-    /// Launches a listening session
-    /// </summary>
-    private async Task HandleStartJournalCommand(long chatId)
+
+    private async Task HandleMenuCommand(long chatId, int messageId)
     {
-        _sessionManager.StartSession(chatId);
-        await _notifService.SendMessageAsync(chatId, BotConstants.Messages.JournalOpened);
+        _stateManager.ClearState(chatId);
+        await _notifService.EditMessageAsync(
+            chatId, messageId,
+            BotConstants.Message.MsgRootMenu,
+            MenuBuilder.GetRootMenu());
+
     }
 
-    /// <summary>
-    /// Stops listening session 
-    /// </summary>
-    private async Task HandleStopJournalCommand(long chatId)
+
+    private async Task HandleStartJournalCommand(long chatId, int messageId)
+    {
+        _stateManager.SetState(chatId, UserState.Journaling);
+        _sessionManager.StartSession(chatId);
+        await _notifService.EditMessageAsync(
+                        chatId, messageId,
+                        BotConstants.Message.MsgJournalRecording,
+                        MenuBuilder.GetJournalRecording());
+    }
+
+
+    private async Task HandleCancelJournalCommand(long chatId, int messageId)
     {
         if (!_sessionManager.IsRecording(chatId))
         {
-            await _notifService.SendMessageAsync(chatId, BotConstants.Messages.JournalAlreadyClosed);
+            await _notifService.EditMessageAsync(
+                chatId, messageId,
+                BotConstants.Message.MsgJournalRecordedEmpty,
+                MenuBuilder.GetJournalRecorded());
+            return;
+        }
+
+        var sessionData = _sessionManager.EndSession(chatId);
+
+        await _notifService.EditMessageAsync(
+            chatId, messageId,
+            BotConstants.Message.MsgJournalRecordedEmpty,
+            MenuBuilder.GetJournalRecorded());
+    }
+
+
+    private async Task HandleSaveJournalCommand(long chatId, int messageId)
+    {
+        if (!_sessionManager.IsRecording(chatId))
+        {
+            await _notifService.EditMessageAsync(
+                chatId, messageId,
+                BotConstants.Message.MsgJournalRecordedEmpty,
+                MenuBuilder.GetJournalRecorded());
             return;
         }
 
@@ -76,21 +171,26 @@ public class TelegramController : ControllerBase
             var command = new SaveJournalSessionCommand(sessionData.Value.SessionId, sessionData.Value.Messages);
             await _mediator.Send(command);
 
-            await _notifService.SendMessageAsync(chatId, BotConstants.Messages.JournalSaved(sessionData.Value.Messages.Count));
+            await _notifService.EditMessageAsync(
+                chatId, messageId,
+                BotConstants.Message.MsgJournalRecorded(sessionData.Value.Messages.Count),
+                MenuBuilder.GetJournalRecorded());
         }
         else
         {
-            await _notifService.SendMessageAsync(chatId, BotConstants.Messages.JournalClosedEmpty);
+            await _notifService.EditMessageAsync(
+                chatId, messageId,
+                BotConstants.Message.MsgJournalRecordedEmpty,
+                MenuBuilder.GetJournalRecorded());
         }
     }
 
-    /// <summary>
-    /// Listens and records messages from user
-    /// </summary>
+
     private Task HandleIncomingMessage(long chatId, Message message)
     {
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] Message type received. Text: {message.Text != null}, Voice: {message.Voice != null}, Audio: {message.Audio != null}, Video: {message.Video != null}, VideoNote: {message.VideoNote != null}");
-        
+
+        Console.WriteLine("reading 2");
+
         if (!string.IsNullOrEmpty(message.Text))
         {
             _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Text, message.Text, null, DateTime.UtcNow));

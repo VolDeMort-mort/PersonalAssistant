@@ -4,17 +4,37 @@ public static class BotConstants
 {
     public static class Commands
     {
+        public const string MainMenu = "/menu";
         public const string StartJournal = "/startjournal";
         public const string StopJournal = "/stopjournal";
     }
 
-    public static class Messages
+    public static class Payloads
     {
-        public const string JournalOpened = "📖 Журнал відкрито. Я слухаю... (відправ текст, аудіо чи відео. Коли закінчиш - напиши /stopjournal)";
-        public const string JournalAlreadyClosed = "Журнал і так був закритий.";
-        public const string JournalClosedEmpty = "Журнал зачинено. Ти нічого не записав 🤷‍♂️";
+        public const string NavRoot = "nav_root";
+        public const string NavJournal = "nav_journal";
+        public const string NavPlanner = "nav_planner";
+        public const string NavScraper = "nav_scraper";
 
-        public static string JournalSaved(int count) =>
-            $"✅ Збережено повідомлень: {count}. Аудіо/відео відправлені на обробку Whisper у фоні!";
+        public const string NavJournalStart = "journal_start";
+        public const string NavJournalRecording = "journal_recording";
+        public const string NavJournalRecorded = "journal_recorded";
+        public const string NavJournalCancelRecord = "journal_cancel_record";
     }
+
+    public static class Message
+    {
+        public const string MsgRootMenu = "👋 Головне меню. Оберіть модуль:";
+        public const string MsgJournalMenu = "📓 Журнал. Режим очікування.";
+        //public const string MsgPlannerMenu = "📅 Планувальник. У вас 2 активні задачі.";
+        //public const string MsgScraperMenu = "🌐 Парсер. Надішліть посилання для автоматичного збору даних.";
+
+        public const string MsgJournalRecording = "🔴 Запис іде... Надішліть повідомлення";
+        public const string MsgJournalRecordedEmpty = "Запис зупинено. Нічого не записано(";
+        public static string MsgJournalRecorded(int count) =>
+            $"✅ Збережено повідомлень: {count}";
+
+        public const string MsgNotImplementedFeature = "На даний момент ця фІча в розробці";
+    }
+
 }
