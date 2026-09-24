@@ -2,32 +2,101 @@
 
 public enum MessageType
 {
-    Text,
-    Voice,
-    Video
+    Text = 0,
+    Voice = 1,
+    Video = 2
+}
+
+public enum ProcessingStatus
+{
+    NotRequired = 0,
+    Pending = 1,
+    Downloaded = 2,
+    Transcribed = 3,
+    Failed = 4
 }
 
 public class JournalEntry
 {
-    public Guid Id { get; set; }
+    private JournalEntry() { }
 
-    public Guid SessionId { get; set; }
+    public Guid Id { get; private set; }
+    public Guid SessionId { get; private set; }
+    public long ChatId { get; private set; }
+    public int MessageId { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public MessageType Type { get; private set; }
+    public string? OriginalText { get; private set; }
+    public string? TelegramFileId { get; private set; }
+    public string? LocalFilePath { get; private set; }
+    public string? TranscribedText { get; private set; }
+    public ProcessingStatus Status { get; private set; }
+    public string? FailureReason { get; private set; }
 
-    public long ChatId { get; set; }
+    public static JournalEntry CreateText(Guid sessionId, long chatId, int messageId, string? text, DateTime createdAt)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
 
-    public int MessageId { get; set; }
+        return new JournalEntry
+        {
+            Id = Guid.NewGuid(),
+            SessionId = sessionId,
+            ChatId = chatId,
+            MessageId = messageId,
+            CreatedAt = createdAt,
+            Type = MessageType.Text,
+            OriginalText = text,
+            Status = ProcessingStatus.NotRequired
+        };
+    }
 
-    public DateTime CreatedAt { get; set; }
-    
-    public MessageType Type { get; set; }
+    public static JournalEntry CreateMedia(Guid sessionId, long chatId, int messageId, MessageType type, string? telegramFileId, DateTime createdAt)
+    {
+        if (type == MessageType.Text)
+            throw new ArgumentException("Use CreateText for text entries.", nameof(type));
+        ArgumentException.ThrowIfNullOrWhiteSpace(telegramFileId);
 
-    public string? OriginalText { get; set; }
+        return new JournalEntry
+        {
+            Id = Guid.NewGuid(),
+            SessionId = sessionId,
+            ChatId = chatId,
+            MessageId = messageId,
+            CreatedAt = createdAt,
+            Type = type,
+            TelegramFileId = telegramFileId,
+            Status = ProcessingStatus.Pending
+        };
+    }
 
-    public string? TelegramFileId { get; set; }
+    public void MarkDownloaded(string localFilePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(localFilePath);
+        if (Status != ProcessingStatus.Pending)
+            throw new InvalidOperationException($"Cannot mark entry as downloaded from status {Status}.");
 
-    public string? LocalFilePath { get; set; }
+        LocalFilePath = localFilePath;
+        Status = ProcessingStatus.Downloaded;
+    }
 
-    public bool IsProcessed { get; set; }
+    public void MarkTranscribed(string transcribedText)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(transcribedText);
+        if (Status != ProcessingStatus.Downloaded)
+            throw new InvalidOperationException($"Cannot mark entry as transcribed from status {Status}.");
 
-    public string? TranscribedText { get; set; }
+        TranscribedText = transcribedText;
+        FailureReason = null;
+        Status = ProcessingStatus.Transcribed;
+    }
+
+    public void MarkFailed(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        if (Status is not (ProcessingStatus.Pending or ProcessingStatus.Downloaded))
+            throw new InvalidOperationException($"Cannot mark entry as failed from status {Status}.");
+
+        FailureReason = reason;
+        Status = ProcessingStatus.Failed;
+    }
 }

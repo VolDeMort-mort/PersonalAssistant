@@ -24,18 +24,14 @@ public class SaveJournalSessionCommandHandler : IRequestHandler<SaveJournalSessi
 
     public async Task Handle(SaveJournalSessionCommand request, CancellationToken cancellationToken)
     {
-        var entries = request.Messages.Select(m => new JournalEntry
+        var entries = request.Messages.Select(m => m.Type switch
         {
-            Id = Guid.NewGuid(),
-            ChatId = request.ChatId,
-            SessionId = request.SessionId,
-            MessageId = m.MessageId,
-            CreatedAt = m.CreatedAt,
-            Type = (MessageType)m.Type,
-            OriginalText = m.Text,
-            TelegramFileId = m.FileId,
-            IsProcessed = m.Type == DtoMessageType.Text
+            DtoMessageType.Text => JournalEntry.CreateText(request.SessionId, request.ChatId, m.MessageId, m.Text, m.CreatedAt),
+            DtoMessageType.Voice => JournalEntry.CreateMedia(request.SessionId, request.ChatId, m.MessageId, MessageType.Voice, m.FileId, m.CreatedAt),
+            DtoMessageType.Video => JournalEntry.CreateMedia(request.SessionId, request.ChatId, m.MessageId, MessageType.Video, m.FileId, m.CreatedAt),
+            _ => throw new ArgumentOutOfRangeException(nameof(m.Type), m.Type, null)
         }).ToList();
+
 
         await _repository.AddRangeAsync(entries, cancellationToken);
 
