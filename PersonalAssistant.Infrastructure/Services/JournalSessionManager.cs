@@ -1,4 +1,5 @@
 ﻿using PersonalAssistant.Application.Interfaces;
+using PersonalAssistant.Application.Features.Journal.Commands;
 using System.Collections.Concurrent;
 
 namespace PersonalAssistant.Infrastracture.Services;

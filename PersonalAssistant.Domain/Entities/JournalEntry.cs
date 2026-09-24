@@ -13,6 +13,10 @@ public class JournalEntry
 
     public Guid SessionId { get; set; }
 
+    public long ChatId { get; set; }
+
+    public int MessageId { get; set; }
+
     public DateTime CreatedAt { get; set; }
     
     public MessageType Type { get; set; }

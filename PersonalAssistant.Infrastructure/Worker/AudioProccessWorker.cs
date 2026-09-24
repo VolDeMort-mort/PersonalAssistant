@@ -1,7 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using PersonalAssistant.Application.Features.Journal.Commands;
 using PersonalAssistant.Application.Interfaces;
+using Telegram.Bot.Types;
+using MediatR;
 
 namespace PersonalAssistant.Infrastructure.Workers;
 
@@ -10,7 +13,7 @@ public class AudioProcessWorker : BackgroundService
     private readonly ILogger<AudioProcessWorker> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IAudioProcessQueue _queue;
-
+    
     public AudioProcessWorker(
         ILogger<AudioProcessWorker> logger,
         IServiceScopeFactory scopeFactory,
@@ -70,9 +73,10 @@ public class AudioProcessWorker : BackgroundService
     private async Task ProcessSingleAudioFileAsync(Guid entryId, CancellationToken stoppingToken)
     {
         using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var repository = scope.ServiceProvider.GetRequiredService<IJournalRepository>();
         var downloader = scope.ServiceProvider.GetRequiredService<IBotMediaDownloader>();
-        var notificationService = scope.ServiceProvider.GetRequiredService<IBotNotifService>();
+        var notifiService = scope.ServiceProvider.GetRequiredService<IBotNotifService>();
 
         _logger.LogInformation($"[AudioProcessWorker] Processing mediafile ID: {entryId.ToString()[..8]}");
 
@@ -97,6 +101,10 @@ public class AudioProcessWorker : BackgroundService
                 _logger.LogInformation($"[AudioProcessWorker] File {entryId.ToString()[..8]} was downloaded: {localPath.ToString()[16..]}");
 
                 entry.LocalFilePath = localPath;
+
+                // Deleting VOICE tg message from chat
+                var deleteCmd = new DeleteTelegramMessagesCommand(entry.ChatId, new List<int> { entry.MessageId});
+                await mediator.Send(deleteCmd, stoppingToken);
             }
             else
             {
