@@ -5,6 +5,7 @@ using Telegram.Bot;
 using PersonalAssistant.Infrastructure.Services;
 using PersonalAssistant.Infrastracture.Services;
 using PersonalAssistant.Infrastructure.Workers;
+using PersonalAssistant.Application.Features.Journal.Commands;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,8 +15,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(SaveJournalSessionCommand).Assembly));
+builder.Services.AddMediatR(cfg => {
+    cfg.RegisterServicesFromAssembly(typeof(SaveJournalSessionCommand).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(DeleteTelegramMessagesCommand).Assembly);
+}); 
 
 
 // Connecting DB
