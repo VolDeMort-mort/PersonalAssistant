@@ -18,7 +18,6 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddMediatR(cfg => {
     cfg.RegisterServicesFromAssembly(typeof(SaveJournalSessionCommand).Assembly);
-    cfg.RegisterServicesFromAssembly(typeof(DeleteTelegramMessagesCommand).Assembly);
 }); 
 
 

@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using PersonalAssistant.Application.Features.Journal.Commands;
 using PersonalAssistant.Application.Interfaces;
-using Telegram.Bot.Types;
+using PersonalAssistant.Application.Features.Journal.Events;
 using MediatR;
 
 namespace PersonalAssistant.Infrastructure.Workers;
@@ -102,9 +101,7 @@ public class AudioProcessWorker : BackgroundService
 
                 entry.LocalFilePath = localPath;
 
-                // Deleting VOICE tg message from chat
-                var deleteCmd = new DeleteTelegramMessagesCommand(entry.ChatId, new List<int> { entry.MessageId});
-                await mediator.Send(deleteCmd, stoppingToken);
+                await mediator.Publish(new JournalEntryStored(entry.Id, entry.ChatId, entry.MessageId), stoppingToken);
             }
             else
             {
