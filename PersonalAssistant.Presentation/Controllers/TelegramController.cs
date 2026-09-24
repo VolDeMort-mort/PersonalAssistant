@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalAssistant.Application.Constants;
 using PersonalAssistant.Application.Interfaces;
 using PersonalAssistant.Presentation.Helpers;
+using PersonalAssistant.Application.Features.Journal.Commands;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
@@ -168,7 +169,7 @@ public class TelegramController : ControllerBase
 
         if (sessionData != null && sessionData.Value.Messages.Any())
         {
-            var command = new SaveJournalSessionCommand(sessionData.Value.SessionId, sessionData.Value.Messages);
+            var command = new SaveJournalSessionCommand(sessionData.Value.SessionId, chatId, sessionData.Value.Messages);
             await _mediator.Send(command);
 
             await _notifService.EditMessageAsync(
@@ -189,19 +190,17 @@ public class TelegramController : ControllerBase
     private Task HandleIncomingMessage(long chatId, Message message)
     {
 
-        Console.WriteLine("reading 2");
-
         if (!string.IsNullOrEmpty(message.Text))
         {
-            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Text, message.Text, null, DateTime.UtcNow));
+            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Text, message.Text, null, DateTime.UtcNow, message.MessageId));
         }
         else if (message.Voice != null)
         {
-            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Voice, null, message.Voice.FileId, DateTime.UtcNow));
+            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Voice, null, message.Voice.FileId, DateTime.UtcNow, message.MessageId));
         }
         else if (message.VideoNote != null)
         {
-            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Video, null, message.VideoNote.FileId, DateTime.UtcNow));
+            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Video, null, message.VideoNote.FileId, DateTime.UtcNow, message.MessageId));
         }
 
         return Task.CompletedTask;
