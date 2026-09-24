@@ -23,7 +23,7 @@ public class GetJournalEntriesByDateQueryHandler : IRequestHandler<GetJournalEnt
             e.Type.ToString(),
             e.OriginalText,
             e.TranscribedText,
-            e.IsProcessed
+            e.Status.ToString()
         ));
     }
 }
