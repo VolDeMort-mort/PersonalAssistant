@@ -25,7 +25,7 @@ public class JournalRepository : IJournalRepository
             .Where(e => e.CreatedAt.Date == date.Date)
             .ToListAsync(cancellationToken);
     }
-    public async Task<JournalEntry> GetByIdAsync(Guid entryId, CancellationToken cancellationToken)
+    public async Task<JournalEntry?> GetByIdAsync(Guid entryId, CancellationToken cancellationToken)
     {
         return await _context.JournalEntries
             .FirstOrDefaultAsync(e => e.Id == entryId, cancellationToken);
@@ -34,7 +34,7 @@ public class JournalRepository : IJournalRepository
     public async Task<IEnumerable<JournalEntry>> GetUnprocessedMediaAsync(CancellationToken cancellationToken)
     {
         return await _context.JournalEntries
-            .Where(e => e.IsProcessed == false)
+            .Where(e => e.Status == ProcessingStatus.Pending || e.Status == ProcessingStatus.Downloaded)
             .ToListAsync(cancellationToken);
     }
 
@@ -44,13 +44,10 @@ public class JournalRepository : IJournalRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task UpdateFilePathAsync(Guid entryId, string localPath, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(JournalEntry entry, CancellationToken cancellationToken = default)
     {
-        var entry = await _context.JournalEntries.FindAsync(new object[] { entryId }, cancellationToken);
-        if (entry != null)
-        {
-            entry.LocalFilePath = localPath;
-            await _context.SaveChangesAsync(cancellationToken);
-        }
+        _context.JournalEntries.Update(entry);
+        await _context.SaveChangesAsync(cancellationToken);
+
     }
 }
