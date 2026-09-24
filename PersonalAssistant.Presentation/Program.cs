@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using PersonalAssistant.Infrastructure.Services;
 using PersonalAssistant.Infrastracture.Services;
+using PersonalAssistant.Presentation.Services;
 using PersonalAssistant.Infrastructure.Workers;
 using PersonalAssistant.Application.Features.Journal.Commands;
 
@@ -28,6 +29,7 @@ builder.Services.AddScoped<IJournalRepository, JournalRepository>();
 
 // Connecting Telegram Bot
 builder.Services.AddScoped<IBotNotifService, BotNotifService>();
+builder.Services.AddScoped<IBotMessenger, BotMessenger>();
 builder.Services.AddScoped<IBotMediaDownloader, BotMediaDownloader>();
 builder.Services.AddSingleton<IAudioProcessQueue, AudioProcessingQueue>();
 

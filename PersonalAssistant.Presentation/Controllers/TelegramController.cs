@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PersonalAssistant.Presentation.Constants;
 using PersonalAssistant.Application.Interfaces;
 using PersonalAssistant.Presentation.Helpers;
+using PersonalAssistant.Presentation.Services;
 using PersonalAssistant.Application.Features.Journal.Commands;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -17,17 +18,17 @@ public class TelegramController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IJournalSessionManager _sessionManager;
-    private readonly IBotNotifService _notifService;
+    private readonly IBotMessenger _messenger;
     public readonly IUserStateManager _stateManager;
 
     public TelegramController(IMediator mediator,
         IJournalSessionManager sessionManager, 
-        IBotNotifService botNotifService, 
+        IBotMessenger messenger, 
         IUserStateManager stateManager)
     {
         _mediator = mediator;
         _sessionManager = sessionManager;
-        _notifService = botNotifService;
+        _messenger = messenger;
         _stateManager = stateManager;
     }
 
@@ -47,21 +48,21 @@ public class TelegramController : ControllerBase
                     break;
 
                 case BotConstants.Payloads.NavJournal:
-                    await _notifService.EditMessageAsync(
+                    await _messenger.EditAsync(
                         chatId, messageId,
                         BotConstants.Message.MsgJournalMenu,
                         MenuBuilder.GetJournalMenu());
                     break;
                 
                 case BotConstants.Payloads.NavPlanner:
-                    await _notifService.EditMessageAsync(
+                    await _messenger.EditAsync(
                         chatId, messageId,
                         BotConstants.Message.MsgNotImplementedFeature,
                         MenuBuilder.GetNotImplementedFeature());
                     break;
 
                 case BotConstants.Payloads.NavScraper:
-                    await _notifService.EditMessageAsync(
+                    await _messenger.EditAsync(
                         chatId, messageId,
                         BotConstants.Message.MsgNotImplementedFeature,
                         MenuBuilder.GetNotImplementedFeature());
@@ -72,7 +73,7 @@ public class TelegramController : ControllerBase
                     break;
 
                 //case BotConstants.Payloads.NavJournalRecording:
-                //    await _notifService.EditMessageAsync(
+                //    await _messenger.EditAsync(
                 //        chatId, messageId,
                 //        BotConstants.Message.MsgJournalRecording,
                 //        MenuBuilder.GetJournalRecording());
@@ -115,7 +116,7 @@ public class TelegramController : ControllerBase
     private async Task HandleMenuCommand(long chatId, int messageId)
     {
         _stateManager.ClearState(chatId);
-        await _notifService.EditMessageAsync(
+        await _messenger.EditAsync(
             chatId, messageId,
             BotConstants.Message.MsgRootMenu,
             MenuBuilder.GetRootMenu());
@@ -127,7 +128,7 @@ public class TelegramController : ControllerBase
     {
         _stateManager.SetState(chatId, UserState.Journaling);
         _sessionManager.StartSession(chatId);
-        await _notifService.EditMessageAsync(
+        await _messenger.EditAsync(
                         chatId, messageId,
                         BotConstants.Message.MsgJournalRecording,
                         MenuBuilder.GetJournalRecording());
@@ -138,7 +139,7 @@ public class TelegramController : ControllerBase
     {
         if (!_sessionManager.IsRecording(chatId))
         {
-            await _notifService.EditMessageAsync(
+            await _messenger.EditAsync(
                 chatId, messageId,
                 BotConstants.Message.MsgJournalRecordedEmpty,
                 MenuBuilder.GetJournalRecorded());
@@ -147,7 +148,7 @@ public class TelegramController : ControllerBase
 
         var sessionData = _sessionManager.EndSession(chatId);
 
-        await _notifService.EditMessageAsync(
+        await _messenger.EditAsync(
             chatId, messageId,
             BotConstants.Message.MsgJournalRecordedEmpty,
             MenuBuilder.GetJournalRecorded());
@@ -158,7 +159,7 @@ public class TelegramController : ControllerBase
     {
         if (!_sessionManager.IsRecording(chatId))
         {
-            await _notifService.EditMessageAsync(
+            await _messenger.EditAsync(
                 chatId, messageId,
                 BotConstants.Message.MsgJournalRecordedEmpty,
                 MenuBuilder.GetJournalRecorded());
@@ -172,14 +173,14 @@ public class TelegramController : ControllerBase
             var command = new SaveJournalSessionCommand(sessionData.Value.SessionId, chatId, sessionData.Value.Messages);
             await _mediator.Send(command);
 
-            await _notifService.EditMessageAsync(
+            await _messenger.EditAsync(
                 chatId, messageId,
                 BotConstants.Message.MsgJournalRecorded(sessionData.Value.Messages.Count),
                 MenuBuilder.GetJournalRecorded());
         }
         else
         {
-            await _notifService.EditMessageAsync(
+            await _messenger.EditAsync(
                 chatId, messageId,
                 BotConstants.Message.MsgJournalRecordedEmpty,
                 MenuBuilder.GetJournalRecorded());
