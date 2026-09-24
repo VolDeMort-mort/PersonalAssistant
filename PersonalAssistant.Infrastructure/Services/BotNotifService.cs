@@ -58,5 +58,17 @@ namespace PersonalAssistant.Infrastructure.Services
             }
 
         }
+
+        public async Task DeleteMessageAsync(long chatId, int messageId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                await _botClient.DeleteMessage(chatId, messageId, cancellationToken);
+            }
+            catch (Exception ex) 
+            {
+                _logger.LogWarning(ex, $"[BotNotifService] Couldnt delete a message {messageId} in {chatId}");
+            }
+        }
     }
 }
