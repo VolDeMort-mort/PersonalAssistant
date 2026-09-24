@@ -1,6 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using PersonalAssistant.Application.Constants;
+using PersonalAssistant.Presentation.Constants;
 using PersonalAssistant.Application.Interfaces;
 using PersonalAssistant.Presentation.Helpers;
 using PersonalAssistant.Application.Features.Journal.Commands;

@@ -1,4 +1,4 @@
-﻿using PersonalAssistant.Application.Constants;
+﻿using PersonalAssistant.Presentation.Constants;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PersonalAssistant.Presentation.Helpers;

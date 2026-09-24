@@ -1,4 +1,4 @@
-﻿namespace PersonalAssistant.Application.Constants;
+﻿namespace PersonalAssistant.Presentation.Constants;
 
 public static class BotConstants
 {
