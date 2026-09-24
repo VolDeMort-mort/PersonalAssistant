@@ -15,6 +15,8 @@ public class JournalEntry
 
     public long ChatId { get; set; }
 
+    public int MessageId { get; set; }
+
     public DateTime CreatedAt { get; set; }
     
     public MessageType Type { get; set; }
