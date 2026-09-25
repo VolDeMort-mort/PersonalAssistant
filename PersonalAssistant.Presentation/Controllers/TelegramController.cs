@@ -7,6 +7,7 @@ using PersonalAssistant.Presentation.Services;
 using PersonalAssistant.Application.Features.Journal.Commands;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using PersonalAssistant.Application.Features.Journal.Queries;
 
 
 namespace PersonalAssistant.Presentation.Controllers;
@@ -103,7 +104,7 @@ public class TelegramController : ControllerBase
             if (text.StartsWith(BotConstants.Commands.MainMenu)) {
                 await HandleMenuCommand(chatId, messageId);
             }
-            else if (_sessionManager.IsRecording(chatId))
+            else if (await _mediator.Send(new IsJournalRecordingQuery(chatId)))
             {
                 await HandleIncomingMessage(chatId, update.Message);
             }
@@ -127,84 +128,54 @@ public class TelegramController : ControllerBase
     private async Task HandleStartJournalCommand(long chatId, int messageId)
     {
         _stateManager.SetState(chatId, UserState.Journaling);
-        _sessionManager.StartSession(chatId);
-        await _messenger.EditAsync(
-                        chatId, messageId,
-                        BotConstants.Message.MsgJournalRecording,
-                        MenuBuilder.GetJournalRecording());
+        await _mediator.Send(new StartJournalSessionCommand(chatId));
+        await _messenger.EditAsync(chatId, messageId,
+            BotConstants.Message.MsgJournalRecording, MenuBuilder.GetJournalRecording());
     }
 
 
     private async Task HandleCancelJournalCommand(long chatId, int messageId)
     {
-        if (!_sessionManager.IsRecording(chatId))
-        {
-            await _messenger.EditAsync(
-                chatId, messageId,
-                BotConstants.Message.MsgJournalRecordedEmpty,
-                MenuBuilder.GetJournalRecorded());
-            return;
-        }
-
-        var sessionData = _sessionManager.EndSession(chatId);
-
-        await _messenger.EditAsync(
-            chatId, messageId,
-            BotConstants.Message.MsgJournalRecordedEmpty,
-            MenuBuilder.GetJournalRecorded());
+        await _mediator.Send(new CancelJournalSessionCommand(chatId));
+        await _messenger.EditAsync(chatId, messageId,
+            BotConstants.Message.MsgJournalRecordedEmpty, MenuBuilder.GetJournalRecorded());
     }
 
 
     private async Task HandleSaveJournalCommand(long chatId, int messageId)
     {
-        if (!_sessionManager.IsRecording(chatId))
-        {
-            await _messenger.EditAsync(
-                chatId, messageId,
-                BotConstants.Message.MsgJournalRecordedEmpty,
-                MenuBuilder.GetJournalRecorded());
-            return;
-        }
+        var savedCount = await _mediator.Send(new SaveJournalSessionCommand(chatId));
 
-        var sessionData = _sessionManager.EndSession(chatId);
+        var text = savedCount > 0
+        ? BotConstants.Message.MsgJournalRecorded(savedCount)
+        : BotConstants.Message.MsgJournalRecordedEmpty;
 
-        if (sessionData != null && sessionData.Value.Messages.Any())
-        {
-            var command = new SaveJournalSessionCommand(sessionData.Value.SessionId, chatId, sessionData.Value.Messages);
-            await _mediator.Send(command);
-
-            await _messenger.EditAsync(
-                chatId, messageId,
-                BotConstants.Message.MsgJournalRecorded(sessionData.Value.Messages.Count),
-                MenuBuilder.GetJournalRecorded());
-        }
-        else
-        {
-            await _messenger.EditAsync(
-                chatId, messageId,
-                BotConstants.Message.MsgJournalRecordedEmpty,
-                MenuBuilder.GetJournalRecorded());
-        }
+        await _messenger.EditAsync(chatId, messageId, text, MenuBuilder.GetJournalRecorded());
     }
 
 
-    private Task HandleIncomingMessage(long chatId, Message message)
+    private async Task HandleIncomingMessage(long chatId, Message message)
     {
 
         if (!string.IsNullOrEmpty(message.Text))
         {
-            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Text, message.Text, null, DateTime.UtcNow, message.MessageId));
+            SessionMessageDto sessionMessage = new SessionMessageDto(DtoMessageType.Text, message.Text, null, DateTime.UtcNow, message.MessageId);
+            await _mediator.Send(new AddJournalSessionMessageCommand(chatId, sessionMessage)); 
         }
         else if (message.Voice != null)
         {
-            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Voice, null, message.Voice.FileId, DateTime.UtcNow, message.MessageId));
+             SessionMessageDto sessionMessage = new SessionMessageDto(DtoMessageType.Voice, null, message.Voice.FileId, DateTime.UtcNow, message.MessageId);
+            await _mediator.Send(new AddJournalSessionMessageCommand(chatId, sessionMessage));
+
         }
         else if (message.VideoNote != null)
         {
-            _sessionManager.AddMessage(chatId, new SessionMessageDto(DtoMessageType.Video, null, message.VideoNote.FileId, DateTime.UtcNow, message.MessageId));
-        }
+            SessionMessageDto sessionMessage= new SessionMessageDto(DtoMessageType.Video, null, message.VideoNote.FileId, DateTime.UtcNow, message.MessageId);
+            await _mediator.Send(new AddJournalSessionMessageCommand(chatId, sessionMessage));
 
-        return Task.CompletedTask;
+        }
+        
+        await Task.CompletedTask;
     }
 
 }
