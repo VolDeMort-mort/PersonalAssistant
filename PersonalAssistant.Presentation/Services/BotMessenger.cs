@@ -53,4 +53,16 @@ public class BotMessenger : IBotMessenger
             _logger.LogWarning(ex, $"[BotNotifService] Telegram API error while editing message in chat {chatId}");
         }
     }
+    public async Task AnswerCallbackAsync(string callbackQueryId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _botClient.AnswerCallbackQuery(callbackQueryId, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to answer callback query {CallbackQueryId}", callbackQueryId);
+        }
+    }
+
 }
