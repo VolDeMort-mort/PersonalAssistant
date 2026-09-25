@@ -7,6 +7,7 @@ using PersonalAssistant.Infrastracture.Services;
 using PersonalAssistant.Presentation.Services;
 using PersonalAssistant.Infrastructure.Workers;
 using PersonalAssistant.Application.Features.Journal.Commands;
+using PersonalAssistant.Presentation.Options;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -35,6 +36,11 @@ builder.Services.AddSingleton<IAudioProcessQueue, AudioProcessingQueue>();
 var botToken = builder.Configuration["TelegramBot:Token"];
 builder.Services.AddHttpClient("tgwebhook")
     .AddTypedClient<ITelegramBotClient>(httpClient => new TelegramBotClient(botToken, httpClient));
+builder.Services.AddOptions<TelegramOptions>()
+    .Bind(builder.Configuration.GetSection(TelegramOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
 
 // Connecting other services
 builder.Services.AddSingleton<IJournalSessionManager, JournalSessionManager>();
