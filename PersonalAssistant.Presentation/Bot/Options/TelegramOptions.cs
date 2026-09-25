@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace PersonalAssistant.Presentation.Options;
+namespace PersonalAssistant.Presentation.Bot.Options;
 
 public class TelegramOptions
 {
