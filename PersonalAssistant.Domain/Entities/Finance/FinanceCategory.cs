@@ -29,4 +29,20 @@ public class FinanceCategory
             SortOrder = sortOrder
         };
     }
+
+    /// <summary>
+    /// Same category for a human: "їжа" matches "🍔 Їжа". Emoji, spaces, punctuation and case are ignored.
+    /// </summary>
+    public bool HasSameName(string name)
+    {
+        var mine = LettersAndDigits(Name);
+        var other = LettersAndDigits(name);
+
+        // Names made of emoji only have no letters to compare
+        return mine.Length == 0 || other.Length == 0
+            ? string.Equals(Name, name.Trim(), StringComparison.Ordinal)
+            : string.Equals(mine, other, StringComparison.CurrentCultureIgnoreCase);
+    }
+
+    private static string LettersAndDigits(string text) => string.Concat(text.Where(char.IsLetterOrDigit));
 }

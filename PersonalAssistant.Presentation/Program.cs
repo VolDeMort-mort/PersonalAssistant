@@ -10,6 +10,7 @@ using PersonalAssistant.Application.Features.Journal.Commands;
 using PersonalAssistant.Presentation.Bot.Options;
 using PersonalAssistant.Presentation.Bot;
 using PersonalAssistant.Presentation.Bot.Handlers;
+using PersonalAssistant.Presentation.Bot.Finance;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -62,8 +63,14 @@ builder.Services.AddHostedService<WebhookRegistrationService>();
 // Handlers: for messages the first match wins, registration order matters
 builder.Services.AddScoped<IMessageHandler, MenuCommandHandler>();
 builder.Services.AddScoped<IMessageHandler, JournalMessageHandler>();
+builder.Services.AddScoped<IMessageHandler, FinanceInputHandler>();
 builder.Services.AddScoped<ICallbackHandler, NavigationCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, JournalCallbackHandler>();
+builder.Services.AddScoped<ICallbackHandler, FinanceCallbackHandler>();
+
+// Finance UI: scenarios and unfinished inputs
+builder.Services.AddScoped<FinanceFlow>();
+builder.Services.AddSingleton<IFinanceDialogStore, FinanceDialogStore>();
 
 
 // Connecting other services

@@ -5,8 +5,9 @@ using PersonalAssistant.Domain.Entities.Finance;
 namespace PersonalAssistant.Application.Features.Finance.Commands;
 
 /// <summary>
-/// Adds a category to the end of the list. If one with this name already exists, returns its id
-/// instead: typing an existing name simply picks that category.
+/// Adds a category to the end of the list. If one with the same name already exists
+/// (see <see cref="FinanceCategory.HasSameName"/>), returns its id instead:
+/// typing "їжа" simply picks "🍔 Їжа".
 /// </summary>
 public record AddCategoryCommand(long ChatId, TransactionType Type, string Name) : IRequest<Guid>;
 
@@ -25,8 +26,7 @@ public class AddCategoryCommandHandler : IRequestHandler<AddCategoryCommand, Gui
     {
         var existing = await _catalog.GetCategoriesAsync(request.ChatId, request.Type, cancellationToken);
 
-        var sameName = existing.FirstOrDefault(c =>
-            string.Equals(c.Name, request.Name.Trim(), StringComparison.CurrentCultureIgnoreCase));
+        var sameName = existing.FirstOrDefault(c => c.HasSameName(request.Name));
         if (sameName is not null)
             return sameName.Id;
 
