@@ -1,6 +1,6 @@
 ﻿namespace PersonalAssistant.Application.Interfaces;
 
-public interface IAudioTranscripService
+public interface IAudioTranscriptionService
 {
     Task<string?> TranscribeAudioAsync(string filePath, CancellationToken cancellationToken = default);
 }

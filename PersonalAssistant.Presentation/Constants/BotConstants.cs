@@ -5,8 +5,6 @@ public static class BotConstants
     public static class Commands
     {
         public const string MainMenu = "/menu";
-        public const string StartJournal = "/startjournal";
-        public const string StopJournal = "/stopjournal";
     }
 
     public static class Payloads
@@ -17,7 +15,6 @@ public static class BotConstants
         public const string NavScraper = "nav_scraper";
 
         public const string NavJournalStart = "journal_start";
-        public const string NavJournalRecording = "journal_recording";
         public const string NavJournalRecorded = "journal_recorded";
         public const string NavJournalCancelRecord = "journal_cancel_record";
     }
@@ -34,7 +31,7 @@ public static class BotConstants
         public static string MsgJournalRecorded(int count) =>
             $"✅ Збережено повідомлень: {count}";
 
-        public const string MsgNotImplementedFeature = "На даний момент ця фІча в розробці";
+        public const string MsgNotImplementedFeature = "На даний момент ця фіча в розробці";
 
         public const string MsgJournalLocked = "🔴 Спершу збережіть або відмініть запис журналу";
     }

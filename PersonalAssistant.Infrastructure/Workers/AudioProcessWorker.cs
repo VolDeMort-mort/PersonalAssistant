@@ -25,9 +25,9 @@ public class AudioProcessWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("[AudioProcessWorker] Worker was launched...");
+        _logger.LogInformation("Audio worker started");
 
-        // Launches rescan db on unproccessed messages
+        // Media left unprocessed by a previous run (e.g. the app stopped mid-download)
         await SweepUnprocessedFilesAsync(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -40,12 +40,12 @@ public class AudioProcessWorker : BackgroundService
             }
             catch (OperationCanceledException)
             {
-                _logger.LogInformation("[AudioProcessWorker] Worker was stopped naturaly");
+                _logger.LogInformation("Audio worker stopped");
                 break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[AudioProcessWorker] Error on audio worker");
+                _logger.LogError(ex, "Audio worker failed to process a journal entry");
             }
         }
     }
@@ -55,18 +55,16 @@ public class AudioProcessWorker : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<IJournalRepository>();
 
-        _logger.LogInformation("[AudioProcessWorker] Checking missed mediafiles...");
-
         var unprocessedEntries = await repository.GetUnprocessedMediaAsync(stoppingToken);
 
-        int count = 0;
+        var count = 0;
         foreach (var entry in unprocessedEntries)
         {
             await _queue.EnqueueAsync(entry.Id, stoppingToken);
             count++;
         }
 
-        _logger.LogInformation($"[AudioProcessWorker] Found and addded to the queue {count} unproccessed files.");
+        _logger.LogInformation("Queued {Count} unprocessed media file(s) from a previous run", count);
     }
 
     private async Task ProcessSingleAudioFileAsync(Guid entryId, CancellationToken stoppingToken)
@@ -75,6 +73,5 @@ public class AudioProcessWorker : BackgroundService
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
         await sender.Send(new ProcessJournalMediaCommand(entryId), stoppingToken);
-
     }
 }
