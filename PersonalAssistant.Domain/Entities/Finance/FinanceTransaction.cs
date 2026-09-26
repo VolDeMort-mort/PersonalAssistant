@@ -28,6 +28,13 @@ public class FinanceTransaction
     public DateTime CreatedAt { get; private set; }
 
     /// <summary>
+    /// The scheduled payment this transaction paid and its due date,
+    /// so undoing the transaction can move the payment back to that date.
+    /// </summary>
+    public Guid? ScheduledPaymentId { get; private set; }
+    public DateOnly? PaidForDate { get; private set; }
+
+    /// <summary>
     /// Chat and direction come from the category, so they can never disagree with it.
     /// </summary>
     public static FinanceTransaction Create(FinanceCategory category, long amount, string? comment, DateTime createdAtUtc)
@@ -44,6 +51,16 @@ public class FinanceTransaction
             Comment = Guard.OptionalText(comment, MaxCommentLength, nameof(comment)),
             CreatedAt = Guard.Utc(createdAtUtc, nameof(createdAtUtc))
         };
+    }
+
+    /// <summary>Only <see cref="ScheduledPayment.Pay"/> creates these, together with moving the payment on.</summary>
+    internal static FinanceTransaction CreateForScheduledPayment(FinanceCategory category, long amount, string title,
+        Guid scheduledPaymentId, DateOnly dueDate, DateTime createdAtUtc)
+    {
+        var transaction = Create(category, amount, title, createdAtUtc);
+        transaction.ScheduledPaymentId = scheduledPaymentId;
+        transaction.PaidForDate = dueDate;
+        return transaction;
     }
 
     /// <param name="balanceDifference">Real balance minus the balance the bot knows: positive adds money, negative removes it.</param>

@@ -33,6 +33,7 @@ builder.Services.AddScoped<IJournalRepository, JournalRepository>();
 builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddScoped<IFinanceTransactionRepository, FinanceTransactionRepository>();
 builder.Services.AddScoped<IFinanceCatalogRepository, FinanceCatalogRepository>();
+builder.Services.AddScoped<IScheduledPaymentRepository, ScheduledPaymentRepository>();
 
 // Clock in the user's time zone (Kyiv)
 builder.Services.AddSingleton<TimeProvider, KyivTimeProvider>();

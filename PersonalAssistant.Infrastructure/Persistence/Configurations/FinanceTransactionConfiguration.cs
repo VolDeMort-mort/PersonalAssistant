@@ -19,6 +19,12 @@ public class FinanceTransactionConfiguration : IEntityTypeConfiguration<FinanceT
             .HasForeignKey(t => t.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Deleting a scheduled payment keeps what was already paid, just without the link
+        builder.HasOne<ScheduledPayment>()
+            .WithMany()
+            .HasForeignKey(t => t.ScheduledPaymentId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Monthly totals filter by chat and time range
         builder.HasIndex(t => new { t.ChatId, t.CreatedAt });
     }

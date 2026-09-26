@@ -18,6 +18,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<FinanceTransaction> FinanceTransactions { get; set; }
     public DbSet<FinanceCategory> FinanceCategories { get; set; }
     public DbSet<FinanceTemplate> FinanceTemplates { get; set; }
+    public DbSet<ScheduledPayment> ScheduledPayments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
