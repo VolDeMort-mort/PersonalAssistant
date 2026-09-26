@@ -57,6 +57,7 @@ builder.Services.AddSingleton<IUserStateManager, UserStateManager>();
 // Bot pipeline
 builder.Services.AddSingleton<IUpdateQueue, UpdateQueue>();
 builder.Services.AddSingleton<IScreenTracker, ScreenTracker>();
+builder.Services.AddSingleton<IDialogStore, DialogStore>();
 builder.Services.AddScoped<IUpdateRouter, UpdateRouter>();
 builder.Services.AddHostedService<UpdateProcessingService>();
 builder.Services.AddHostedService<WebhookRegistrationService>();
@@ -65,13 +66,19 @@ builder.Services.AddHostedService<WebhookRegistrationService>();
 builder.Services.AddScoped<IMessageHandler, MenuCommandHandler>();
 builder.Services.AddScoped<IMessageHandler, JournalMessageHandler>();
 builder.Services.AddScoped<IMessageHandler, FinanceInputHandler>();
+builder.Services.AddScoped<IMessageHandler, PaymentInputHandler>();
 builder.Services.AddScoped<ICallbackHandler, NavigationCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, JournalCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, FinanceCallbackHandler>();
+builder.Services.AddScoped<ICallbackHandler, PaymentCallbackHandler>();
 
-// Finance UI: scenarios and unfinished inputs
+// Finance UI: scenarios
 builder.Services.AddScoped<FinanceFlow>();
-builder.Services.AddSingleton<IFinanceDialogStore, FinanceDialogStore>();
+builder.Services.AddScoped<PaymentFlow>();
+
+// Payment reminders: the worker (Infrastructure) runs the use case, the notifier (Presentation) sends to Telegram
+builder.Services.AddScoped<IPaymentReminderNotifier, TelegramPaymentReminderNotifier>();
+builder.Services.AddHostedService<PaymentReminderWorker>();
 
 
 // Connecting other services

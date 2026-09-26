@@ -13,14 +13,8 @@ namespace PersonalAssistant.Presentation.Bot.Finance;
 /// </summary>
 public static class FinanceView
 {
-    private static readonly string[] MonthNames =
-    {
-        "Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень",
-        "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"
-    };
-
-    // Under every title; as the widest line it also keeps all finance windows the same width
-    private const string Separator = "────────────────────────";
+    // Overdue payments listed on the dashboard; the rest are behind "🗓 Планові витрати"
+    private const int MaxOverdueShown = 3;
 
     public const string GoneNotice = "⚠️ Цього запису вже не існує";
     public const string AlreadyUndoneNotice = "ℹ️ Операцію вже скасовано";
@@ -39,13 +33,29 @@ public static class FinanceView
     /// <param name="recorded">Just recorded transaction: confirmed in the text and offered for undo.</param>
     public static BotScreen Dashboard(FinanceDashboardDto dashboard, string? notice, TransactionDto? recorded)
     {
-        var body = string.Join('\n',
+        var body = new StringBuilder(string.Join('\n',
             $"💳 Баланс: <b>{MoneyFormat.Amount(dashboard.Balance)}</b>",
             "",
             $"📈 Доходи: <b>{MoneyFormat.Signed(dashboard.MonthIncome)}</b>",
             $"📉 Витрати: <b>{MoneyFormat.Signed(-dashboard.MonthExpense)}</b>",
-            Separator,
-            $"{MonthResultLabel(dashboard.MonthResult)}: <b>{MoneyFormat.Signed(dashboard.MonthResult)}</b>");
+            ScreenText.Separator,
+            $"{MonthResultLabel(dashboard.MonthResult)}: <b>{MoneyFormat.Signed(dashboard.MonthResult)}</b>"));
+
+        if (dashboard.OverduePayments.Count > 0)
+        {
+            body.Append("\n\n⚠️ <b>Прострочено</b>");
+            foreach (var payment in dashboard.OverduePayments.Take(MaxOverdueShown))
+                body.Append('\n').Append(PaymentLine(payment));
+            if (dashboard.OverduePayments.Count > MaxOverdueShown)
+                body.Append($"\nі ще {dashboard.OverduePayments.Count - MaxOverdueShown}");
+        }
+
+        if (dashboard.NextPayment is { } next)
+        {
+            body.Append("\n\n⏰ <b>Найближча оплата</b>\n")
+                .Append($"{HtmlText.Encode(next.Title)} · <b>{MoneyFormat.Amount(next.Amount)}</b>\n")
+                .Append($"{DateText.Short(next.NextDueDate)} · {DateText.DaysLeft(next.DaysLeft)}");
+        }
 
         notice ??= recorded is null ? null : RecordedNotice(recorded);
 
@@ -59,13 +69,18 @@ public static class FinanceView
         });
         rows.Add(new[]
         {
-            Button("⚖️ Коригування", FinancePayloads.Balance),
-            Button("🔙 Назад", BotConstants.Payloads.NavRoot)
+            Button("🗓 Планові витрати", PaymentPayloads.List),
+            Button("⚖️ Коригування", FinancePayloads.Balance)
         });
+        rows.Add(new[] { Button("🔙 Назад", BotConstants.Payloads.NavRoot) });
 
-        var title = $"💰 Фінанси · {MonthNames[dashboard.Month.Month - 1]}";
-        return new BotScreen(Compose(title, body, notice), new InlineKeyboardMarkup(rows));
+        var title = $"💰 Фінанси · {DateText.MonthName(dashboard.Month.Month)}";
+        return new BotScreen(ScreenText.Compose(title, body.ToString(), notice), new InlineKeyboardMarkup(rows));
     }
+
+    /// <summary>"📱 Мобільний · 250 ₴ · пн, 29.09".</summary>
+    public static string PaymentLine(ScheduledPaymentDto payment) =>
+        $"{HtmlText.Encode(payment.Title)} · <b>{MoneyFormat.Amount(payment.Amount)}</b> · {DateText.Short(payment.NextDueDate)}";
 
     public static BotScreen Templates(TransactionType type, IReadOnlyList<TemplateDto> templates, string? notice)
     {
@@ -84,7 +99,7 @@ public static class FinanceView
         rows.Add(new[] { Button("🔙 Назад", FinancePayloads.Home) });
 
         var title = type == TransactionType.Expense ? "➖ Оплатити" : "➕ Зарахувати";
-        return new BotScreen(Compose(title, body, notice), new InlineKeyboardMarkup(rows));
+        return new BotScreen(ScreenText.Compose(title, body, notice), new InlineKeyboardMarkup(rows));
     }
 
     public static BotScreen TemplateCard(TemplateDetailsDto template)
@@ -104,7 +119,7 @@ public static class FinanceView
             new[] { Button("🔙 Назад", FinancePayloads.Templates(template.Type)) }
         });
 
-        return new BotScreen(Compose(template.Title, body, notice: null), keyboard);
+        return new BotScreen(ScreenText.Compose(template.Title, body, notice: null), keyboard);
     }
 
     /// <param name="categories">Needed only on the category step.</param>
@@ -115,7 +130,7 @@ public static class FinanceView
             body.Append(draft).Append("\n\n");
         body.Append(Prompt(dialog));
 
-        return new BotScreen(Compose(DialogTitle(dialog), body.ToString(), error), DialogKeyboard(dialog, categories));
+        return new BotScreen(ScreenText.Compose(DialogTitle(dialog), body.ToString(), error), DialogKeyboard(dialog, categories));
     }
 
     private static string DialogTitle(FinanceDialog dialog) => dialog.Kind switch
@@ -184,15 +199,6 @@ public static class FinanceView
         FinanceStep.TemplateAmount => Button("🔢 Питати щоразу", FinancePayloads.Skip),
         _ => null
     };
-
-    /// <summary>Centered title, separator, body and an optional notice at the bottom.</summary>
-    /// <param name="title">Plain text: it is encoded here, after its width is measured.</param>
-    private static string Compose(string title, string body, string? notice)
-    {
-        var padding = TextLayout.CenterPadding(title, Separator, bold: true);
-        var text = $"{padding}<b>{HtmlText.Encode(title)}</b>\n{Separator}\n{body}";
-        return notice is null ? text : $"{text}\n\n{notice}";
-    }
 
     private static string MonthResultLabel(long result) => result switch
     {

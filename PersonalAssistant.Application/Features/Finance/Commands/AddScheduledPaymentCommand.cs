@@ -7,6 +7,7 @@ using PersonalAssistant.Domain.Entities.Finance;
 namespace PersonalAssistant.Application.Features.Finance.Commands;
 
 /// <param name="RemindDaysBefore">Null together with <paramref name="RemindAt"/>: no reminder.</param>
+/// <param name="AnchorDay">Day of month to return to; by default the day of <paramref name="FirstDueDate"/>.</param>
 public record AddScheduledPaymentCommand(
     long ChatId,
     Guid CategoryId,
@@ -15,7 +16,8 @@ public record AddScheduledPaymentCommand(
     Recurrence Recurrence,
     DateOnly FirstDueDate,
     int? RemindDaysBefore,
-    TimeOnly? RemindAt) : IRequest<Guid>;
+    TimeOnly? RemindAt,
+    int? AnchorDay = null) : IRequest<Guid>;
 
 public class AddScheduledPaymentCommandHandler : IRequestHandler<AddScheduledPaymentCommand, Guid>
 {
@@ -43,7 +45,7 @@ public class AddScheduledPaymentCommandHandler : IRequestHandler<AddScheduledPay
             ?? throw new NotFoundException(nameof(FinanceCategory), request.CategoryId);
 
         var payment = ScheduledPayment.Create(category, request.Title, request.Amount, request.Recurrence,
-            request.FirstDueDate, request.RemindDaysBefore, request.RemindAt, _time.GetUtcNow().UtcDateTime);
+            request.FirstDueDate, request.RemindDaysBefore, request.RemindAt, _time.GetUtcNow().UtcDateTime, request.AnchorDay);
         _payments.Add(payment);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

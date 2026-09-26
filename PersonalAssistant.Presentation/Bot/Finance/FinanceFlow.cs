@@ -18,10 +18,10 @@ public class FinanceFlow
 {
     private readonly ISender _sender;
     private readonly IBotMessenger _messenger;
-    private readonly IFinanceDialogStore _dialogs;
+    private readonly IDialogStore _dialogs;
     private readonly IScreenTracker _screens;
 
-    public FinanceFlow(ISender sender, IBotMessenger messenger, IFinanceDialogStore dialogs, IScreenTracker screens)
+    public FinanceFlow(ISender sender, IBotMessenger messenger, IDialogStore dialogs, IScreenTracker screens)
     {
         _sender = sender;
         _messenger = messenger;
@@ -159,7 +159,7 @@ public class FinanceFlow
 
     public async Task CancelAsync(long chatId, CancellationToken ct)
     {
-        var dialog = _dialogs.Get(chatId);
+        var dialog = _dialogs.Get<FinanceDialog>(chatId);
         if (dialog is null || dialog.Kind == FinanceDialogKind.Balance)
             await ShowHomeAsync(chatId, ct);
         else
@@ -169,11 +169,11 @@ public class FinanceFlow
     // ---------- Dialogs: typed text ----------
 
     public bool IsWaitingForText(long chatId) =>
-        _dialogs.Get(chatId) is { } dialog && dialog.ScreenId == _screens.Get(chatId);
+        _dialogs.Get<FinanceDialog>(chatId) is { } dialog && dialog.ScreenId == _screens.Get(chatId);
 
     public async Task HandleTextAsync(long chatId, string? text, CancellationToken ct)
     {
-        var dialog = _dialogs.Get(chatId);
+        var dialog = _dialogs.Get<FinanceDialog>(chatId);
         if (dialog is null)
             return;
 
@@ -348,7 +348,7 @@ public class FinanceFlow
     /// <summary>A button of an old dialog step (or of no dialog at all) must not act on the current one.</summary>
     private bool TryGetDialog(long chatId, [NotNullWhen(true)] out FinanceDialog? dialog, params FinanceStep[] steps)
     {
-        dialog = _dialogs.Get(chatId);
+        dialog = _dialogs.Get<FinanceDialog>(chatId);
         return dialog is not null && steps.Contains(dialog.Step);
     }
 

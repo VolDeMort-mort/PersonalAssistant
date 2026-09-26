@@ -30,11 +30,9 @@ public enum FinanceStep
 }
 
 /// <summary>
-/// Unfinished input: which step the user is on and what was entered so far.
-/// It is UI state, so it lives in Presentation and only in memory: a restart drops
-/// the unfinished input, while everything already saved stays.
+/// Unfinished finance input: which step the user is on and what was entered so far.
 /// </summary>
-public class FinanceDialog
+public class FinanceDialog : BotDialog
 {
     private FinanceDialog(FinanceDialogKind kind, TransactionType type, FinanceStep step)
     {
@@ -49,12 +47,6 @@ public class FinanceDialog
     public TransactionType Type { get; }
 
     public FinanceStep Step { get; set; }
-
-    /// <summary>
-    /// The window the dialog is drawn in. After /menu opens a new window,
-    /// typed text is no longer meant for this dialog.
-    /// </summary>
-    public int? ScreenId { get; set; }
 
     public long? Amount { get; set; }
     public Guid? CategoryId { get; set; }

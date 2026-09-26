@@ -45,9 +45,17 @@ public class ScheduledPayment
     public DateTime CreatedAt { get; private set; }
 
     /// <param name="remindDaysBefore">Null together with <paramref name="remindAt"/>: no reminder.</param>
+    /// <param name="anchorDay">
+    /// Day of month to return to; by default the day of <paramref name="firstDueDate"/>.
+    /// "Monthly on the 31st" chosen in September starts on the 30th with anchor day 31.
+    /// </param>
     public static ScheduledPayment Create(FinanceCategory category, string title, long amount, Recurrence recurrence,
-        DateOnly firstDueDate, int? remindDaysBefore, TimeOnly? remindAt, DateTime createdAtUtc)
+        DateOnly firstDueDate, int? remindDaysBefore, TimeOnly? remindAt, DateTime createdAtUtc, int? anchorDay = null)
     {
+        var anchor = anchorDay ?? firstDueDate.Day;
+        if (anchor is < 1 or > 31 || DueDates.OnDay(firstDueDate.Year, firstDueDate.Month, anchor) != firstDueDate)
+            throw new ArgumentException("The first due date must fall on the anchor day.", nameof(anchorDay));
+
         ArgumentNullException.ThrowIfNull(category);
         if (category.Type != TransactionType.Expense)
             throw new ArgumentException("A scheduled payment needs an expense category.", nameof(category));
@@ -65,7 +73,7 @@ public class ScheduledPayment
             CategoryId = category.Id,
             Recurrence = recurrence,
             NextDueDate = firstDueDate,
-            AnchorDay = firstDueDate.Day,
+            AnchorDay = anchor,
             RemindDaysBefore = remindDaysBefore,
             RemindAt = remindAt,
             IsActive = true,
@@ -135,6 +143,5 @@ public class ScheduledPayment
         _ => date
     };
 
-    private DateOnly OnAnchorDay(DateOnly date) =>
-        new(date.Year, date.Month, Math.Min(AnchorDay, DateTime.DaysInMonth(date.Year, date.Month)));
+    private DateOnly OnAnchorDay(DateOnly date) => DueDates.OnDay(date.Year, date.Month, AnchorDay);
 }

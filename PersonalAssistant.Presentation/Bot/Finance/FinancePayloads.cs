@@ -4,10 +4,8 @@ namespace PersonalAssistant.Presentation.Bot.Finance;
 
 /// <param name="Name">One of <see cref="FinancePayloads.Actions"/>.</param>
 /// <param name="Arg">Id or transaction type, depending on the action.</param>
-public record FinanceAction(string Name, string? Arg)
+public record FinanceAction(string Name, string? Arg) : CallbackAction(Name, Arg)
 {
-    public Guid? Id => Guid.TryParseExact(Arg, "N", out var id) ? id : null;
-
     public TransactionType? Type => Arg switch
     {
         FinancePayloads.ExpenseCode => TransactionType.Expense,
@@ -16,10 +14,7 @@ public record FinanceAction(string Name, string? Arg)
     };
 }
 
-/// <summary>
-/// Callback data of finance buttons: "fin:action" or "fin:action:arg".
-/// Telegram allows 64 bytes, a Guid in "N" format takes 32.
-/// </summary>
+/// <summary>Callback data of finance buttons: "fin:action" or "fin:action:arg".</summary>
 public static class FinancePayloads
 {
     public const string Prefix = "fin:";
@@ -63,8 +58,8 @@ public static class FinancePayloads
 
     public static FinanceAction Parse(string payload)
     {
-        var parts = payload[Prefix.Length..].Split(':', 2);
-        return new FinanceAction(parts[0], parts.Length > 1 ? parts[1] : null);
+        var (name, arg) = CallbackAction.Split(payload, Prefix);
+        return new FinanceAction(name, arg);
     }
 
     private static string Build(string action, string arg) => $"{Prefix}{action}:{arg}";

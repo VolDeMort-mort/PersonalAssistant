@@ -37,5 +37,9 @@ public static class KeyboardLayout
             yield return new[] { waiting };
     }
 
+    /// <summary>Equal-width grid for buttons of the same kind: days, hours, months.</summary>
+    public static IEnumerable<InlineKeyboardButton[]> Grid(IEnumerable<InlineKeyboardButton> buttons, int perRow) =>
+        buttons.Chunk(perRow);
+
     private static bool IsShort(InlineKeyboardButton button) => TextLayout.Width(button.Text) <= HalfRowWidth;
 }
