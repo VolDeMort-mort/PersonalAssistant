@@ -22,7 +22,8 @@ public class MenuCommandHandler: IMessageHandler
     public async Task HandleAsync(MessageContext context, CancellationToken ct)
     {
         _stateManager.ClearState(context.ChatId);
-        await _messenger.SendAsync(context.ChatId, BotConstants.Message.MsgRootMenu, MenuBuilder.GetRootMenu(), ct);
+        await _messenger.DeleteAsync(context.ChatId, context.MessageId, ct);
+        await _messenger.OpenScreenAsync(context.ChatId, BotConstants.Message.MsgRootMenu, MenuBuilder.GetRootMenu(), ct);
     }
 
 }

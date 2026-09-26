@@ -35,6 +35,8 @@ public static class BotConstants
             $"✅ Збережено повідомлень: {count}";
 
         public const string MsgNotImplementedFeature = "На даний момент ця фІча в розробці";
+
+        public const string MsgJournalLocked = "🔴 Спершу збережіть або відмініть запис журналу";
     }
 
 }

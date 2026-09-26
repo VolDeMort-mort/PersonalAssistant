@@ -47,6 +47,7 @@ builder.Services.AddSingleton<IUserStateManager, UserStateManager>();
 
 // Bot pipeline
 builder.Services.AddSingleton<IUpdateQueue, UpdateQueue>();
+builder.Services.AddSingleton<IScreenTracker, ScreenTracker>();
 builder.Services.AddScoped<IUpdateRouter, UpdateRouter>();
 builder.Services.AddHostedService<UpdateProcessingService>();
 builder.Services.AddHostedService<WebhookRegistrationService>();

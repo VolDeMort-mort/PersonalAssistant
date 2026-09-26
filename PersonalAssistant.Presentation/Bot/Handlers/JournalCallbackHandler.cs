@@ -41,14 +41,14 @@ public class JournalCallbackHandler : ICallbackHandler
     {
         _stateManager.SetState(context.ChatId, UserState.Journaling);
         await _mediator.Send(new StartJournalSessionCommand(context.ChatId), cancellationToken);
-        await _messenger.EditAsync(context.ChatId, context.MessageId,
+        await _messenger.ShowScreenAsync(context.ChatId,
             BotConstants.Message.MsgJournalRecording, MenuBuilder.GetJournalRecording(), cancellationToken);
     }
 
     private async Task CancelAsync(CallbackContext context, CancellationToken cancellationToken)
     {
         await _mediator.Send(new CancelJournalSessionCommand(context.ChatId), cancellationToken);
-        await _messenger.EditAsync(context.ChatId, context.MessageId,
+        await _messenger.ShowScreenAsync(context.ChatId,
             BotConstants.Message.MsgJournalRecordedEmpty, MenuBuilder.GetJournalRecorded(), cancellationToken);
     }
 
@@ -60,7 +60,7 @@ public class JournalCallbackHandler : ICallbackHandler
         ? BotConstants.Message.MsgJournalRecorded(savedCount)
         : BotConstants.Message.MsgJournalRecordedEmpty;
 
-        await _messenger.EditAsync(context.ChatId, context.MessageId, text, MenuBuilder.GetJournalRecorded(), cancellationToken);
+        await _messenger.ShowScreenAsync(context.ChatId, text, MenuBuilder.GetJournalRecorded(), cancellationToken);
     }
 
 
