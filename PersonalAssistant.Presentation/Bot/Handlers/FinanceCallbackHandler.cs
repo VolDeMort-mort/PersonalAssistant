@@ -40,6 +40,10 @@ public class FinanceCallbackHandler : ICallbackHandler
                 { Name: Actions.Skip } => _flow.SkipAsync(chatId, ct),
                 { Name: Actions.Cancel } => _flow.CancelAsync(chatId, ct),
                 { Name: Actions.Undo, Id: { } id } => _flow.UndoAsync(chatId, id, ct),
+                { Name: Actions.History, Number: { } page } => _flow.ShowHistoryAsync(chatId, page, notice: null, ct),
+                { Name: Actions.Transaction, TransactionRef: { } tx } => _flow.ShowTransactionAsync(chatId, tx.Id, tx.Page, confirmDelete: false, ct),
+                { Name: Actions.DeleteTransaction, TransactionRef: { } tx } => _flow.ShowTransactionAsync(chatId, tx.Id, tx.Page, confirmDelete: true, ct),
+                { Name: Actions.ConfirmDeleteTransaction, TransactionRef: { } tx } => _flow.DeleteTransactionAsync(chatId, tx.Id, tx.Page, ct),
                 _ => UnknownAsync(chatId, context.Payload, ct)
             });
         }

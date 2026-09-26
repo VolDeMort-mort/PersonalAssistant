@@ -12,6 +12,12 @@ public record FinanceAction(string Name, string? Arg) : CallbackAction(Name, Arg
         FinancePayloads.IncomeCode => TransactionType.Income,
         _ => null
     };
+
+    /// <summary>"id.page" of history buttons: the transaction and the history page to return to.</summary>
+    public (Guid Id, int Page)? TransactionRef =>
+        Arg?.Split('.') is [var id, var page] && Guid.TryParseExact(id, "N", out var guid) && int.TryParse(page, out var number)
+            ? (guid, number)
+            : null;
 }
 
 /// <summary>Callback data of finance buttons: "fin:action" or "fin:action:arg".</summary>
@@ -38,6 +44,10 @@ public static class FinancePayloads
         public const string Skip = "skip";
         public const string Cancel = "cancel";
         public const string Undo = "undo";
+        public const string History = "hist";
+        public const string Transaction = "tx";
+        public const string DeleteTransaction = "deltx";
+        public const string ConfirmDeleteTransaction = "deltxok";
     }
 
     public const string Home = Prefix + Actions.Home;
@@ -55,6 +65,10 @@ public static class FinancePayloads
     public static string DeleteTemplate(Guid id) => Build(Actions.DeleteTemplate, id.ToString("N"));
     public static string Category(Guid id) => Build(Actions.Category, id.ToString("N"));
     public static string Undo(Guid id) => Build(Actions.Undo, id.ToString("N"));
+    public static string History(int page) => Build(Actions.History, page.ToString());
+    public static string Transaction(Guid id, int page) => Build(Actions.Transaction, TransactionRef(id, page));
+    public static string DeleteTransaction(Guid id, int page) => Build(Actions.DeleteTransaction, TransactionRef(id, page));
+    public static string ConfirmDeleteTransaction(Guid id, int page) => Build(Actions.ConfirmDeleteTransaction, TransactionRef(id, page));
 
     public static FinanceAction Parse(string payload)
     {
@@ -63,6 +77,9 @@ public static class FinancePayloads
     }
 
     private static string Build(string action, string arg) => $"{Prefix}{action}:{arg}";
+
+    // "fin:deltxok:" + 32 + "." + page stays well under Telegram's 64 bytes
+    private static string TransactionRef(Guid id, int page) => $"{id:N}.{page}";
 
     private static string Code(TransactionType type) => type == TransactionType.Income ? IncomeCode : ExpenseCode;
 }

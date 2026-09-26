@@ -40,7 +40,7 @@ public static class PaymentView
         rows.Add(new[]
         {
             Button("➕ Додати", PaymentPayloads.New),
-            Button("🔙 Назад", FinancePayloads.Home)
+            Button("🔙 Назад", FinancePayloads.Templates(TransactionType.Expense))
         });
 
         return new BotScreen(ScreenText.Compose("🗓 Планові витрати", body, notice), new InlineKeyboardMarkup(rows));

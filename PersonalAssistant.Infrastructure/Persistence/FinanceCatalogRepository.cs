@@ -26,6 +26,12 @@ public class FinanceCatalogRepository : IFinanceCatalogRepository
     public Task<FinanceCategory?> GetCategoryAsync(long chatId, Guid id, CancellationToken cancellationToken) =>
         _context.FinanceCategories.FirstOrDefaultAsync(c => c.ChatId == chatId && c.Id == id, cancellationToken);
 
+    public async Task<IReadOnlyList<FinanceCategory>> GetAllCategoriesAsync(long chatId, CancellationToken cancellationToken) =>
+        await _context.FinanceCategories
+            .AsNoTracking()
+            .Where(c => c.ChatId == chatId)
+            .ToListAsync(cancellationToken);
+
     public void AddCategory(FinanceCategory category) => _context.FinanceCategories.Add(category);
 
     public async Task<IReadOnlyList<FinanceTemplate>> GetTemplatesAsync(long chatId, TransactionType type, CancellationToken cancellationToken) =>

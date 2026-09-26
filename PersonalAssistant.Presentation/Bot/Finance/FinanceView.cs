@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using PersonalAssistant.Application.Features.Finance.Dtos;
 using PersonalAssistant.Domain.Entities.Finance;
@@ -13,7 +14,7 @@ namespace PersonalAssistant.Presentation.Bot.Finance;
 /// </summary>
 public static class FinanceView
 {
-    // Overdue payments listed on the dashboard; the rest are behind "🗓 Планові витрати"
+    // Overdue payments listed on the dashboard; the rest are behind "➖ Оплатити" → "🗓 Планові витрати"
     private const int MaxOverdueShown = 3;
 
     public const string GoneNotice = "⚠️ Цього запису вже не існує";
@@ -69,7 +70,7 @@ public static class FinanceView
         });
         rows.Add(new[]
         {
-            Button("🗓 Планові витрати", PaymentPayloads.List),
+            Button("📜 Історія", FinancePayloads.History(page: 1)),
             Button("⚖️ Коригування", FinancePayloads.Balance)
         });
         rows.Add(new[] { Button("🔙 Назад", BotConstants.Payloads.NavRoot) });
@@ -77,6 +78,91 @@ public static class FinanceView
         var title = $"💰 Фінанси · {DateText.MonthName(dashboard.Month.Month)}";
         return new BotScreen(ScreenText.Compose(title, body.ToString(), notice), new InlineKeyboardMarkup(rows));
     }
+
+    public static BotScreen History(HistoryPageDto history, string? notice)
+    {
+        var body = new StringBuilder();
+        if (history.TopExpenses.Count > 0)
+        {
+            body.Append("🔥 <b>Топ витрат</b>");
+            foreach (var category in history.TopExpenses)
+            {
+                body.Append('\n').Append($"{HtmlText.Encode(category.CategoryName)} · <b>{MoneyFormat.Amount(category.Total)}</b>");
+                if (history.MonthExpense > 0)
+                    body.Append($" · {Math.Round(category.Total * 100.0 / history.MonthExpense)}%");
+            }
+            body.Append('\n').Append(ScreenText.Separator).Append('\n');
+        }
+
+        body.Append(history.TotalCount == 0
+            ? "Цього місяця операцій ще немає"
+            : $"{history.TotalCount} {DateText.Plural(history.TotalCount, "операція", "операції", "операцій")} · сторінка {history.Page} з {history.PageCount}");
+
+        // A chronological list: one per row even when short, so the order is obvious
+        var rows = history.Transactions
+            .Select(t => new[] { Button($"{t.CreatedAtLocal.ToString("dd.MM", CultureInfo.InvariantCulture)} · {Label(t)}",
+                FinancePayloads.Transaction(t.Id, history.Page)) })
+            .ToList();
+
+        if (history.PageCount > 1)
+        {
+            var pages = new List<InlineKeyboardButton>();
+            if (history.Page > 1)
+                pages.Add(Button("◀️", FinancePayloads.History(history.Page - 1)));
+            pages.Add(Button($"{history.Page} / {history.PageCount}", FinancePayloads.History(history.Page)));
+            if (history.Page < history.PageCount)
+                pages.Add(Button("▶️", FinancePayloads.History(history.Page + 1)));
+            rows.Add(pages.ToArray());
+        }
+        rows.Add(new[] { Button("🔙 Назад", FinancePayloads.Home) });
+
+        var title = $"📜 Історія · {DateText.MonthName(history.Month.Month)}";
+        return new BotScreen(ScreenText.Compose(title, body.ToString(), notice), new InlineKeyboardMarkup(rows));
+    }
+
+    /// <param name="page">History page to return to.</param>
+    /// <param name="confirmDelete">Deleting can't be undone, so it is asked once more.</param>
+    public static BotScreen TransactionCard(TransactionDto transaction, int page, bool confirmDelete)
+    {
+        var lines = new List<string> { $"Сума: <b>{MoneyFormat.Signed(transaction.Amount, transaction.Type)}</b>" };
+        if (transaction.Comment is not null && transaction.CategoryName is not null)
+            lines.Add($"Категорія: {HtmlText.Encode(transaction.CategoryName)}");
+        lines.Add($"Дата: {DateText.Short(DateOnly.FromDateTime(transaction.CreatedAtLocal))} · "
+            + transaction.CreatedAtLocal.ToString("HH:mm", CultureInfo.InvariantCulture));
+        if (transaction.IsScheduledPayment)
+            lines.Add("🗓 Оплата планової витрати");
+        if (transaction.IsAdjustment)
+            lines.Add("Не входить у підсумки місяця");
+
+        string? question = null;
+        if (confirmDelete)
+        {
+            // Deleting an expense gives the money back to the balance, deleting income takes it away
+            var balanceChange = transaction.Type == TransactionType.Expense ? transaction.Amount : -transaction.Amount;
+            question = $"🗑 Видалити цю операцію? Баланс зміниться на <b>{MoneyFormat.Signed(balanceChange)}</b>";
+            if (transaction.IsScheduledPayment)
+                question += "\nЯкщо це остання оплата планової витрати, її дата повернеться назад";
+        }
+
+        var keyboard = new InlineKeyboardMarkup(new[]
+        {
+            confirmDelete
+                ? new[]
+                {
+                    Button("🗑 Так, видалити", FinancePayloads.ConfirmDeleteTransaction(transaction.Id, page)),
+                    Button("✖️ Ні", FinancePayloads.Transaction(transaction.Id, page))
+                }
+                : new[]
+                {
+                    Button("🗑 Видалити", FinancePayloads.DeleteTransaction(transaction.Id, page)),
+                    Button("🔙 Назад", FinancePayloads.History(page))
+                }
+        });
+
+        return new BotScreen(ScreenText.Compose(What(transaction), string.Join('\n', lines), question), keyboard);
+    }
+
+    public static string DeletedNotice(TransactionDto transaction) => $"🗑 Видалено: {HtmlText.Encode(Label(transaction))}";
 
     /// <summary>"📱 Мобільний · 250 ₴ · пн, 29.09".</summary>
     public static string PaymentLine(ScheduledPaymentDto payment) =>
@@ -91,6 +177,9 @@ public static class FinanceView
         var rows = KeyboardLayout
             .Pack(templates.Select(t => Button(WithAmount(t.Title, t.Amount), FinancePayloads.Template(t.Id))))
             .ToList();
+        // Planned expenses are paid from here too, so they live on the expense screen
+        if (type == TransactionType.Expense)
+            rows.Add(new[] { Button("🗓 Планові витрати", PaymentPayloads.List) });
         rows.Add(new[]
         {
             Button("✍️ Вручну", FinancePayloads.Manual(type)),
@@ -208,13 +297,14 @@ public static class FinanceView
     };
 
     /// <summary>Plain text, e.g. "🚌 Проїзд −30 ₴": used in buttons and (encoded) in notices.</summary>
-    private static string Label(TransactionDto transaction)
-    {
-        var what = transaction.IsAdjustment
+    private static string Label(TransactionDto transaction) =>
+        $"{What(transaction)} {MoneyFormat.Signed(transaction.Amount, transaction.Type)}";
+
+    /// <summary>What the transaction was: its comment, else its category.</summary>
+    private static string What(TransactionDto transaction) =>
+        transaction.IsAdjustment
             ? "⚖️ Коригування"
             : transaction.Comment ?? transaction.CategoryName ?? "Операція";
-        return $"{what} {MoneyFormat.Signed(transaction.Amount, transaction.Type)}";
-    }
 
     private static string WithAmount(string text, long? amount) =>
         amount is { } value ? $"{text} · {MoneyFormat.Amount(value)}" : text;

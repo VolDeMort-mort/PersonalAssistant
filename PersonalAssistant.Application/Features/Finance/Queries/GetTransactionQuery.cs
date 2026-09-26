@@ -31,13 +31,6 @@ public class GetTransactionQueryHandler : IRequestHandler<GetTransactionQuery, T
             ? await _catalog.GetCategoryAsync(request.ChatId, categoryId, cancellationToken)
             : null;
 
-        return new TransactionDto(
-            transaction.Id,
-            transaction.Type,
-            transaction.Amount,
-            category?.Name,
-            transaction.Comment,
-            transaction.IsAdjustment,
-            _time.ToLocal(transaction.CreatedAt));
+        return TransactionDto.From(transaction, category?.Name, _time.ToLocal(transaction.CreatedAt));
     }
 }

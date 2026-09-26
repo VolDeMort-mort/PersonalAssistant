@@ -72,7 +72,38 @@ public class FinanceFlow
         await ShowAsync(chatId, FinanceView.TemplateCard(template), ct);
     }
 
+    public async Task ShowHistoryAsync(long chatId, int page, string? notice, CancellationToken ct)
+    {
+        _dialogs.Remove(chatId);
+
+        var history = await _sender.Send(new GetHistoryQuery(chatId, page), ct);
+        await ShowAsync(chatId, FinanceView.History(history, notice), ct);
+    }
+
+    /// <param name="page">History page to return to.</param>
+    /// <param name="confirmDelete">Asks "delete it?" instead of showing the plain card.</param>
+    public async Task ShowTransactionAsync(long chatId, Guid transactionId, int page, bool confirmDelete, CancellationToken ct)
+    {
+        _dialogs.Remove(chatId);
+
+        var transaction = await _sender.Send(new GetTransactionQuery(chatId, transactionId), ct)
+            ?? throw new NotFoundException(nameof(FinanceTransaction), transactionId);
+        await ShowAsync(chatId, FinanceView.TransactionCard(transaction, page, confirmDelete), ct);
+    }
+
     // ---------- One-click actions ----------
+
+    /// <summary>Deletion from history, already confirmed; a scheduled payment may move back to its date.</summary>
+    public async Task DeleteTransactionAsync(long chatId, Guid transactionId, int page, CancellationToken ct)
+    {
+        var transaction = await _sender.Send(new GetTransactionQuery(chatId, transactionId), ct);
+
+        var notice = transaction is not null && await _sender.Send(new DeleteTransactionCommand(chatId, transactionId), ct)
+            ? FinanceView.DeletedNotice(transaction)
+            : FinanceView.GoneNotice;
+
+        await ShowHistoryAsync(chatId, page, notice, ct);
+    }
 
     public async Task UseTemplateAsync(long chatId, Guid templateId, CancellationToken ct)
     {
