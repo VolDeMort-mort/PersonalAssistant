@@ -1,39 +1,45 @@
-﻿using MediatR;
+﻿using System.Reflection.Metadata;
+using MediatR;
+using PersonalAssistant.Application.Features.Journal.Events;
 using PersonalAssistant.Application.Interfaces;
 using PersonalAssistant.Domain.Entities;
 
 namespace PersonalAssistant.Application.Features.Journal.Commands;
 
-
-public class SaveJournalSessionCommandHandler : IRequestHandler<SaveJournalSessionCommand>
+public class SaveJournalSessionCommandHandler : IRequestHandler<SaveJournalSessionCommand, int>
 {
-    private readonly IMediator _mediator;
+    private readonly IPublisher _publisher;
     private readonly IJournalRepository _repository;
     private readonly IAudioProcessQueue _queue;
+    private readonly IJournalSessionManager _sessions;
 
     public SaveJournalSessionCommandHandler(
-        IMediator mediator,
+        IPublisher publisher,
         IJournalRepository repository, 
-        IAudioProcessQueue queue)
+        IAudioProcessQueue queue,
+        IJournalSessionManager sessions)
     {
-        _mediator = mediator;
+        _publisher = publisher;
         _repository = repository;
         _queue = queue;
+        _sessions = sessions;
     }
 
-    public async Task Handle(SaveJournalSessionCommand request, CancellationToken cancellationToken)
+    public async Task<int> Handle(SaveJournalSessionCommand request, CancellationToken cancellationToken)
     {
-        var entries = request.Messages.Select(m => new JournalEntry
+        var session = _sessions.EndSession(request.ChatId);
+        if (session is null || session.Value.Messages.Count == 0)
+        return 0;
+
+        var (sessionId, messages) = session.Value;
+
+
+        var entries = messages.Select(m => m.Type switch
         {
-            Id = Guid.NewGuid(),
-            ChatId = request.ChatId,
-            SessionId = request.SessionId,
-            MessageId = m.MessageId,
-            CreatedAt = m.CreatedAt,
-            Type = (MessageType)m.Type,
-            OriginalText = m.Text,
-            TelegramFileId = m.FileId,
-            IsProcessed = m.Type == DtoMessageType.Text
+            DtoMessageType.Text => JournalEntry.CreateText(sessionId, request.ChatId, m.MessageId, m.Text, m.CreatedAt),
+            DtoMessageType.Voice => JournalEntry.CreateMedia(sessionId, request.ChatId, m.MessageId, MessageType.Voice, m.FileId, m.CreatedAt),
+            DtoMessageType.Video => JournalEntry.CreateMedia(sessionId, request.ChatId, m.MessageId, MessageType.Video, m.FileId, m.CreatedAt),
+            _ => throw new ArgumentOutOfRangeException(nameof(m.Type), m.Type, null)
         }).ToList();
 
         await _repository.AddRangeAsync(entries, cancellationToken);
@@ -42,12 +48,11 @@ public class SaveJournalSessionCommandHandler : IRequestHandler<SaveJournalSessi
         {
             if (entry.Type == MessageType.Voice || entry.Type == MessageType.Video)
                 await _queue.EnqueueAsync(entry.Id, cancellationToken);
-            // FIXXX!!! Not clean architecture approach
-            // Deleting text tg messages from chat
             else if (entry.Type == MessageType.Text) {
-                var deleteCmd = new DeleteTelegramMessagesCommand(entry.ChatId, new List<int> { entry.MessageId });
-                await _mediator.Send(deleteCmd, cancellationToken);
+                await _publisher.Publish(new JournalEntryStored(entry.Id, entry.ChatId, entry.MessageId), cancellationToken);
             }
         }
+
+        return entries.Count;
     }
 }

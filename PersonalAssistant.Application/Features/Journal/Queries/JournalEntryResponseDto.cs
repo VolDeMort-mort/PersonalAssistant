@@ -6,5 +6,5 @@ public record JournalEntryResponseDto(
     string Type,
     string? Text,
     string? TranscribedText,
-    bool IsProcessed
+    string Status
 );

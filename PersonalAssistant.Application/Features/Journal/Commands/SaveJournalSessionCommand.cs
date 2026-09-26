@@ -9,4 +9,4 @@ public enum DtoMessageType
     Video
 }
 
-public record SaveJournalSessionCommand(Guid SessionId, long ChatId, List<SessionMessageDto> Messages) : IRequest;
+public record SaveJournalSessionCommand(long ChatId) : IRequest<int>;
