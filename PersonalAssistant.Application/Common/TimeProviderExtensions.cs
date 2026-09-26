@@ -23,6 +23,8 @@ public static class TimeProviderExtensions
             TimeZoneInfo.ConvertTimeToUtc(start.AddMonths(1), time.LocalTimeZone));
     }
 
+    public static DateOnly GetLocalToday(this TimeProvider time) => DateOnly.FromDateTime(time.GetLocalNow().DateTime);
+
     public static DateTime ToLocal(this TimeProvider time, DateTime utc) =>
         // EF reads datetime2 back without a Kind, but the database only holds UTC
         TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), time.LocalTimeZone);
