@@ -22,6 +22,169 @@ namespace PersonalAssistant.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.FinanceCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatId", "Type", "Name")
+                        .IsUnique();
+
+                    b.ToTable("FinanceCategories");
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.FinanceTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long?>("Amount")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("ChatId", "Type");
+
+                    b.ToTable("FinanceTemplates");
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.FinanceTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsAdjustment")
+                        .HasColumnType("bit");
+
+                    b.Property<DateOnly?>("PaidForDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("ScheduledPaymentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("ScheduledPaymentId");
+
+                    b.HasIndex("ChatId", "CreatedAt");
+
+                    b.ToTable("FinanceTransactions");
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.ScheduledPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("Amount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("AnchorDay")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateOnly?>("LastRemindedFor")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("NextDueDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Recurrence")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly?>("RemindAt")
+                        .HasColumnType("time");
+
+                    b.Property<int?>("RemindDaysBefore")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("IsActive", "NextDueDate");
+
+                    b.HasIndex("ChatId", "IsActive", "NextDueDate");
+
+                    b.ToTable("ScheduledPayments");
+                });
+
             modelBuilder.Entity("PersonalAssistant.Domain.Entities.JournalEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -64,6 +227,37 @@ namespace PersonalAssistant.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("JournalEntries");
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.FinanceTemplate", b =>
+                {
+                    b.HasOne("PersonalAssistant.Domain.Entities.Finance.FinanceCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.FinanceTransaction", b =>
+                {
+                    b.HasOne("PersonalAssistant.Domain.Entities.Finance.FinanceCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PersonalAssistant.Domain.Entities.Finance.ScheduledPayment", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduledPaymentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.ScheduledPayment", b =>
+                {
+                    b.HasOne("PersonalAssistant.Domain.Entities.Finance.FinanceCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

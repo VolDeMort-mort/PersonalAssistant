@@ -37,6 +37,6 @@ public class NavigationCallbackHandler : ICallbackHandler
         if (context.Payload == BotConstants.Payloads.NavRoot)
             _stateManager.ClearState(context.ChatId);
 
-        return _messenger.EditAsync(context.ChatId, context.MessageId, text, menu, cancellationToken);
+        return _messenger.ShowScreenAsync(context.ChatId, text, menu, cancellationToken);
     }
 }

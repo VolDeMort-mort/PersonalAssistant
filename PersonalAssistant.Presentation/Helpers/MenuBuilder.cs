@@ -1,4 +1,5 @@
-﻿using PersonalAssistant.Presentation.Constants;
+﻿using PersonalAssistant.Presentation.Bot.Finance;
+using PersonalAssistant.Presentation.Constants;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PersonalAssistant.Presentation.Helpers;
@@ -11,6 +12,7 @@ public static class MenuBuilder
         return new InlineKeyboardMarkup(new[]
         {
             new[] { InlineKeyboardButton.WithCallbackData("📓 Журнал", BotConstants.Payloads.NavJournal) },
+            new[] { InlineKeyboardButton.WithCallbackData("💰 Фінанси", FinancePayloads.Home) },
             new[] { InlineKeyboardButton.WithCallbackData("📅 Планувальник", BotConstants.Payloads.NavPlanner) },
             new[] { InlineKeyboardButton.WithCallbackData("🌐 Інфа з сайтів", BotConstants.Payloads.NavScraper) }
         });
@@ -21,8 +23,11 @@ public static class MenuBuilder
     {
         return new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("🟢 Почати запис", BotConstants.Payloads.NavJournalStart) },
-            new[] { InlineKeyboardButton.WithCallbackData("🔙 Назад", BotConstants.Payloads.NavRoot) }
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🟢 Почати запис", BotConstants.Payloads.NavJournalStart),
+                InlineKeyboardButton.WithCallbackData("🔙 Назад", BotConstants.Payloads.NavRoot)
+            }
         });
     }
 
@@ -31,8 +36,11 @@ public static class MenuBuilder
     {
         return new InlineKeyboardMarkup(new[]
         {
-            new[] { InlineKeyboardButton.WithCallbackData("🛑 Зберегти", BotConstants.Payloads.NavJournalRecorded) },
-            new[] { InlineKeyboardButton.WithCallbackData("Відмінити", BotConstants.Payloads.NavJournalCancelRecord) },
+            new[]
+            {
+                InlineKeyboardButton.WithCallbackData("🛑 Зберегти", BotConstants.Payloads.NavJournalRecorded),
+                InlineKeyboardButton.WithCallbackData("Відмінити", BotConstants.Payloads.NavJournalCancelRecord)
+            }
         });
     }
 
