@@ -28,6 +28,13 @@ builder.Services.AddMediatR(cfg => {
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IJournalRepository, JournalRepository>();
+// Same scoped AppDbContext as the repositories, so one SaveChanges commits all of their changes
+builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
+builder.Services.AddScoped<IFinanceTransactionRepository, FinanceTransactionRepository>();
+builder.Services.AddScoped<IFinanceCatalogRepository, FinanceCatalogRepository>();
+
+// Clock in the user's time zone (Kyiv)
+builder.Services.AddSingleton<TimeProvider, KyivTimeProvider>();
 
 // Connecting Telegram Bot
 builder.Services.AddScoped<IBotNotifService, BotNotifService>();
