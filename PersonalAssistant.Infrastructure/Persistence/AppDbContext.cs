@@ -2,8 +2,6 @@
 using PersonalAssistant.Application.Interfaces;
 using PersonalAssistant.Domain.Entities;
 using PersonalAssistant.Domain.Entities.Finance;
-using System.Collections.Generic;
-using System.Reflection.Emit;
 
 namespace PersonalAssistant.Infrastructure.Persistence;
 

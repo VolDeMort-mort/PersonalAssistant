@@ -3,7 +3,6 @@ using PersonalAssistant.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Telegram.Bot;
 using PersonalAssistant.Infrastructure.Services;
-using PersonalAssistant.Infrastracture.Services;
 using PersonalAssistant.Presentation.Services;
 using PersonalAssistant.Infrastructure.Workers;
 using PersonalAssistant.Application.Features.Journal.Commands;
@@ -52,7 +51,6 @@ builder.Services.AddOptions<TelegramOptions>()
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
-builder.Services.AddSingleton<IUserStateManager, UserStateManager>();
 
 // Bot pipeline
 builder.Services.AddSingleton<IUpdateQueue, UpdateQueue>();

@@ -1,6 +1,8 @@
 using MediatR;
 using PersonalAssistant.Application.Interfaces;
 
+namespace PersonalAssistant.Application.Features.Journal.Commands;
+
 public record CancelJournalSessionCommand(long ChatId) : IRequest;
 
 public class CancelJournalSessionCommandHandler : IRequestHandler<CancelJournalSessionCommand>

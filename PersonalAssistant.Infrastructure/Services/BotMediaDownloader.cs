@@ -1,17 +1,19 @@
-﻿using PersonalAssistant.Application.Interfaces;
+using Microsoft.Extensions.Logging;
+using PersonalAssistant.Application.Interfaces;
 using Telegram.Bot;
 
 namespace PersonalAssistant.Infrastructure.Services;
 
-
-public class BotMediaDownloader: IBotMediaDownloader
+public class BotMediaDownloader : IBotMediaDownloader
 {
     private readonly ITelegramBotClient _botClient;
+    private readonly ILogger<BotMediaDownloader> _logger;
     private readonly string _downloadFolder;
 
-    public BotMediaDownloader(ITelegramBotClient botClient)
+    public BotMediaDownloader(ITelegramBotClient botClient, ILogger<BotMediaDownloader> logger)
     {
         _botClient = botClient;
+        _logger = logger;
 
         _downloadFolder = Path.Combine(Directory.GetCurrentDirectory(), "DownloadedMedia");
 
@@ -37,8 +39,10 @@ public class BotMediaDownloader: IBotMediaDownloader
 
             return localFilePath;
         }
-        catch (Exception)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // The caller only learns "no file": the reason must not be lost
+            _logger.LogWarning(ex, "Could not download Telegram file {FileId}", fileId);
             return null;
         }
     }

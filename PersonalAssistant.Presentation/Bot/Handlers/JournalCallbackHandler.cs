@@ -1,12 +1,11 @@
 using PersonalAssistant.Presentation.Constants;
 using PersonalAssistant.Presentation.Services;
 using PersonalAssistant.Presentation.Helpers;
-using PersonalAssistant.Application.Interfaces;
 using PersonalAssistant.Application.Features.Journal.Commands;
 using MediatR;
 
-
 namespace PersonalAssistant.Presentation.Bot.Handlers;
+
 public class JournalCallbackHandler : ICallbackHandler
 {
     private static readonly HashSet<string> Payloads = new()
@@ -18,13 +17,11 @@ public class JournalCallbackHandler : ICallbackHandler
 
     private readonly IMediator _mediator;
     private readonly IBotMessenger _messenger;
-    private readonly IUserStateManager _stateManager;
 
-    public JournalCallbackHandler(IMediator mediator, IBotMessenger messenger, IUserStateManager stateManager)
+    public JournalCallbackHandler(IMediator mediator, IBotMessenger messenger)
     {
         _mediator = mediator;
         _messenger = messenger;
-        _stateManager = stateManager;
     }
 
     public bool CanHandle(string payload) => Payloads.Contains(payload);
@@ -39,7 +36,6 @@ public class JournalCallbackHandler : ICallbackHandler
     
     private async Task StartAsync(CallbackContext context, CancellationToken cancellationToken)
     {
-        _stateManager.SetState(context.ChatId, UserState.Journaling);
         await _mediator.Send(new StartJournalSessionCommand(context.ChatId), cancellationToken);
         await _messenger.ShowScreenAsync(context.ChatId,
             BotConstants.Message.MsgJournalRecording, MenuBuilder.GetJournalRecording(), cancellationToken);

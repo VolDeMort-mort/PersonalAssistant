@@ -2,9 +2,9 @@
 using PersonalAssistant.Application.Features.Journal.Commands;
 using System.Collections.Concurrent;
 
-namespace PersonalAssistant.Infrastracture.Services;
+namespace PersonalAssistant.Infrastructure.Services;
 
-public class JournalSessionManager: IJournalSessionManager
+public class JournalSessionManager : IJournalSessionManager
 {
     private class ActiveSession
     {
@@ -31,8 +31,7 @@ public class JournalSessionManager: IJournalSessionManager
     }
 
     /// <summary>
-    /// Stops the listening session. 
-    /// Merges all recorded lines splited by "\n"
+    /// Stops the recording session and returns what was recorded; null when no session was running.
     /// </summary>
     public (Guid SessionId, List<SessionMessageDto> Messages)? EndSession(long chatId)
     {

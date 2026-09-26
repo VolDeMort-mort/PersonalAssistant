@@ -1,9 +1,9 @@
 using PersonalAssistant.Presentation.Constants;
 using PersonalAssistant.Presentation.Services;
 using PersonalAssistant.Presentation.Helpers;
-using PersonalAssistant.Application.Interfaces;
 
 namespace PersonalAssistant.Presentation.Bot.Handlers;
+
 public class NavigationCallbackHandler : ICallbackHandler
 {
     private static readonly HashSet<string> Payloads = new()
@@ -15,12 +15,10 @@ public class NavigationCallbackHandler : ICallbackHandler
     };
 
     private readonly IBotMessenger _messenger;
-    private readonly IUserStateManager _stateManager;
 
-    public NavigationCallbackHandler(IBotMessenger messenger, IUserStateManager stateManager)
+    public NavigationCallbackHandler(IBotMessenger messenger)
     {
         _messenger = messenger;
-        _stateManager = stateManager;
     }
 
     public bool CanHandle(string payload) => Payloads.Contains(payload);
@@ -33,9 +31,6 @@ public class NavigationCallbackHandler : ICallbackHandler
             BotConstants.Payloads.NavJournal => (BotConstants.Message.MsgJournalMenu, MenuBuilder.GetJournalMenu()),
             _                                => (BotConstants.Message.MsgNotImplementedFeature, MenuBuilder.GetNotImplementedFeature())
         };
-
-        if (context.Payload == BotConstants.Payloads.NavRoot)
-            _stateManager.ClearState(context.ChatId);
 
         return _messenger.ShowScreenAsync(context.ChatId, text, menu, cancellationToken);
     }
