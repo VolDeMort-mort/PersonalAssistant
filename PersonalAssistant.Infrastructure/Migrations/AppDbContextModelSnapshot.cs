@@ -229,6 +229,96 @@ namespace PersonalAssistant.Infrastructure.Migrations
                     b.ToTable("JournalEntries");
                 });
 
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Planner.PlannerSettings", b =>
+                {
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("AgendaHour")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("LastAgendaSentOn")
+                        .HasColumnType("date");
+
+                    b.HasKey("ChatId");
+
+                    b.ToTable("PlannerSettings");
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Planner.PlannerTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly?>("DueTime")
+                        .HasColumnType("time");
+
+                    b.Property<DateTime?>("LastRemindedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RemindMinutesBefore")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SnoozedUntil")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("TopicId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TopicId");
+
+                    b.HasIndex("CompletedAt", "DueDate");
+
+                    b.HasIndex("ChatId", "CompletedAt", "DueDate");
+
+                    b.ToTable("PlannerTasks");
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Planner.PlannerTopic", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("PlannerTopics");
+                });
+
             modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.FinanceTemplate", b =>
                 {
                     b.HasOne("PersonalAssistant.Domain.Entities.Finance.FinanceCategory", null)
@@ -258,6 +348,49 @@ namespace PersonalAssistant.Infrastructure.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Planner.PlannerTask", b =>
+                {
+                    b.HasOne("PersonalAssistant.Domain.Entities.Planner.PlannerTopic", null)
+                        .WithMany()
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.OwnsOne("PersonalAssistant.Domain.Entities.Planner.RepeatRule", "Repeat", b1 =>
+                        {
+                            b1.Property<Guid>("PlannerTaskId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<int>("AnchorDay")
+                                .HasColumnType("int")
+                                .HasColumnName("RepeatAnchorDay");
+
+                            b1.Property<int>("AnchorMonth")
+                                .HasColumnType("int")
+                                .HasColumnName("RepeatAnchorMonth");
+
+                            b1.Property<int>("Days")
+                                .HasColumnType("int")
+                                .HasColumnName("RepeatDays");
+
+                            b1.Property<int>("Interval")
+                                .HasColumnType("int")
+                                .HasColumnName("RepeatInterval");
+
+                            b1.Property<int>("Kind")
+                                .HasColumnType("int")
+                                .HasColumnName("RepeatKind");
+
+                            b1.HasKey("PlannerTaskId");
+
+                            b1.ToTable("PlannerTasks");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PlannerTaskId");
+                        });
+
+                    b.Navigation("Repeat");
                 });
 #pragma warning restore 612, 618
         }
