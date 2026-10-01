@@ -5,6 +5,7 @@ using PersonalAssistant.Application.Common.Exceptions;
 using PersonalAssistant.Application.Features.Finance.Commands;
 using PersonalAssistant.Application.Features.Finance.Dtos;
 using PersonalAssistant.Application.Features.Finance.Queries;
+using PersonalAssistant.Domain.Common;
 using PersonalAssistant.Domain.Entities.Finance;
 using PersonalAssistant.Presentation.Helpers;
 using PersonalAssistant.Presentation.Services;

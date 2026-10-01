@@ -15,4 +15,8 @@ public static class ScreenText
         var text = $"{padding}<b>{HtmlText.Encode(title)}</b>\n{Separator}\n{body}";
         return notice is null ? text : $"{text}\n\n{notice}";
     }
+
+    /// <summary>A label that starts a button or a line: "щотижня" → "Щотижня".</summary>
+    public static string Capitalize(string text) =>
+        text.Length == 0 ? text : char.ToUpper(text[0]) + text[1..];
 }

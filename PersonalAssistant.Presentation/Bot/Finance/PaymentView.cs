@@ -18,12 +18,6 @@ public static class PaymentView
     private const int LastReminderHour = 22;
     private const int MonthsAhead = 12;
 
-    private static readonly DayOfWeek[] WeekFromMonday =
-    {
-        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
-        DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
-    };
-
     public const string ChooseWithButtonsError = "⚠️ Оберіть варіант кнопкою";
     public const string DateInPastError = "⚠️ Ця дата вже минула";
 
@@ -190,44 +184,33 @@ public static class PaymentView
             case PaymentStep.Recurrence:
                 rows.AddRange(KeyboardLayout.Grid(
                     new[] { Recurrence.Once, Recurrence.Weekly, Recurrence.Monthly, Recurrence.Yearly }
-                        .Select(r => Button(Capitalize(RecurrenceLabel(r)), PaymentPayloads.Recurrence(r))), perRow: 2));
+                        .Select(r => Button(ScreenText.Capitalize(RecurrenceLabel(r)), PaymentPayloads.Recurrence(r))), perRow: 2));
                 break;
 
             case PaymentStep.Weekday:
-                rows.AddRange(KeyboardLayout.Grid(
-                    WeekFromMonday.Select(d => Button(Capitalize(DateText.Weekday(d)), PaymentPayloads.Weekday(d))), perRow: 7));
+                rows.AddRange(PickerKeyboards.Weekdays(PaymentPayloads.Weekday));
                 break;
 
             case PaymentStep.MonthDay:
-                rows.AddRange(KeyboardLayout.Grid(
-                    Enumerable.Range(1, 31).Select(d => Button(d.ToString(), PaymentPayloads.MonthDay(d))), perRow: 7));
+                rows.AddRange(PickerKeyboards.MonthDays(PaymentPayloads.MonthDay));
                 break;
 
             case PaymentStep.Month:
-                var thisMonth = new DateOnly(today.Year, today.Month, 1);
-                rows.AddRange(KeyboardLayout.Grid(
-                    Enumerable.Range(0, MonthsAhead)
-                        .Select(i => thisMonth.AddMonths(i))
-                        .Select(m => Button(MonthLabel(m, today), PaymentPayloads.Month(m))), perRow: 3));
+                rows.AddRange(PickerKeyboards.Months(today, MonthsAhead, PaymentPayloads.Month));
                 break;
 
             case PaymentStep.Day when dialog.Month is { } month:
-                var firstDay = month.Year == today.Year && month.Month == today.Month ? today.Day : 1;
-                var lastDay = DateTime.DaysInMonth(month.Year, month.Month);
-                rows.AddRange(KeyboardLayout.Grid(
-                    Enumerable.Range(firstDay, lastDay - firstDay + 1).Select(d => Button(d.ToString(), PaymentPayloads.Day(d))), perRow: 7));
+                rows.AddRange(PickerKeyboards.Days(month, today, PaymentPayloads.Day));
                 break;
 
             case PaymentStep.RemindDays:
                 rows.AddRange(KeyboardLayout.Pack(
-                    RemindDayOptions.Select(d => Button(Capitalize(RemindDaysLabel(d)), PaymentPayloads.RemindDays(d)))
+                    RemindDayOptions.Select(d => Button(ScreenText.Capitalize(RemindDaysLabel(d)), PaymentPayloads.RemindDays(d)))
                         .Prepend(Button("🔕 Без нагадування", PaymentPayloads.NoReminder))));
                 break;
 
             case PaymentStep.RemindHour:
-                rows.AddRange(KeyboardLayout.Grid(
-                    Enumerable.Range(FirstReminderHour, LastReminderHour - FirstReminderHour + 1)
-                        .Select(h => Button($"{h:00}:00", PaymentPayloads.RemindHour(h))), perRow: 4));
+                rows.AddRange(PickerKeyboards.Hours(FirstReminderHour, LastReminderHour, PaymentPayloads.RemindHour));
                 break;
         }
 
@@ -242,13 +225,6 @@ public static class PaymentView
 
         return new InlineKeyboardMarkup(rows);
     }
-
-    private static string MonthLabel(DateOnly month, DateOnly today) =>
-        month.Year == today.Year
-            ? DateText.MonthShortName(month.Month)
-            : $"{DateText.MonthShortName(month.Month)} {month.Year}";
-
-    private static string Capitalize(string text) => char.ToUpper(text[0]) + text[1..];
 
     private static InlineKeyboardButton Button(string text, string payload) =>
         InlineKeyboardButton.WithCallbackData(text, payload);
