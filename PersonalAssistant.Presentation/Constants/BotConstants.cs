@@ -11,7 +11,6 @@ public static class BotConstants
     {
         public const string NavRoot = "nav_root";
         public const string NavJournal = "nav_journal";
-        public const string NavPlanner = "nav_planner";
         public const string NavScraper = "nav_scraper";
 
         public const string NavJournalStart = "journal_start";
@@ -23,7 +22,6 @@ public static class BotConstants
     {
         public const string MsgRootMenu = "👋 Головне меню. Оберіть модуль:";
         public const string MsgJournalMenu = "📓 Журнал. Режим очікування.";
-        //public const string MsgPlannerMenu = "📅 Планувальник. У вас 2 активні задачі.";
         //public const string MsgScraperMenu = "🌐 Парсер. Надішліть посилання для автоматичного збору даних.";
 
         public const string MsgJournalRecording = "🔴 Запис іде... Надішліть повідомлення";
