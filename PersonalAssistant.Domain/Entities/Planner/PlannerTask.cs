@@ -108,7 +108,7 @@ public class PlannerTask
     }
 
     /// <summary>
-    /// The date moves to the first occurrence of the rule: "Mon, Wed, Fri" set on a Tuesday task means Wednesday.
+    /// The date moves to the rule's first occurrence on or after it (see <see cref="RepeatRule.FirstOnOrAfter"/>).
     /// A task without a date starts <paramref name="today"/>. Null makes it a one-time task.
     /// </summary>
     public void SetRepeat(RepeatRule? rule, DateOnly today)

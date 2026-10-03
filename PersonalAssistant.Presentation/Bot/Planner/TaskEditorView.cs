@@ -1,23 +1,20 @@
 using System.Text;
 using PersonalAssistant.Application.Features.Planner.Dtos;
-using PersonalAssistant.Domain.Entities.Planner;
 using PersonalAssistant.Presentation.Helpers;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace PersonalAssistant.Presentation.Bot.Planner;
 
 /// <summary>
-/// Screens of the task editor. Everything but the title and a new topic's name is picked with buttons.
+/// Screens of the task editor. The title, a new topic's name and the exact time are typed;
+/// dates, repeats, reminders and topics are picked with buttons.
 /// </summary>
 public static class TaskEditorView
 {
     private const int MonthsAhead = 12;
 
-    // After "Сьогодні" and "Завтра", the rest of the week gets a button per day
-    private const int WeekdayButtons = 5;
-
-    /// <summary>Minutes offered after an hour: a task time is precise enough to a quarter of an hour.</summary>
-    public static readonly int[] MinuteOptions = { 0, 15, 30, 45 };
+    // Under the big "Сьогодні": six days from tomorrow on, three in a row
+    private const int NextDays = 6;
 
     private static readonly int[] Intervals = { 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 21, 30 };
     private const int FirstReminderHours = 3;
@@ -62,11 +59,13 @@ public static class TaskEditorView
         EditorStep.Month => "Оберіть місяць",
         EditorStep.Day when dialog.Draft.Month is { } month => $"{DateText.MonthName(month.Month)} {month.Year}: якого числа?",
         EditorStep.Day => "Якого числа?",
-        EditorStep.Hour => "О котрій? Без часу — задача на весь день",
-        EditorStep.Minute when dialog.Draft.Hour is { } hour => $"{hour:00}:?? — оберіть хвилини",
-        EditorStep.Minute => "Оберіть хвилини",
+        EditorStep.Hour =>
+            "⏰ О котрій? Надішліть годину від 0 до 23, напр. <code>9</code>\n«Без часу» — задача на весь день",
+        // The hour is known, the minutes are still hidden under a spoiler until they are typed
+        EditorStep.Minute when dialog.Draft.Hour is { } hour =>
+            $"⏰ <b>{hour:00}:</b><tg-spoiler>00</tg-spoiler>\nТепер надішліть хвилини від 0 до 59, напр. <code>30</code>",
+        EditorStep.Minute => "Надішліть хвилини від 0 до 59",
         EditorStep.Repeat => "Повторювати?",
-        EditorStep.Weekdays => "Оберіть дні тижня й натисніть «Готово»",
         EditorStep.Interval => "Кожні скільки днів?",
         EditorStep.Reminder => "Коли нагадати?",
         EditorStep.ReminderHours => "За скільки годин нагадати?",
@@ -81,17 +80,11 @@ public static class TaskEditorView
         switch (dialog.Step)
         {
             case EditorStep.Date:
-                rows.Add(new[]
-                {
-                    Button("Сьогодні", TaskEditorPayloads.Date(today)),
-                    Button("Завтра", TaskEditorPayloads.Date(today.AddDays(1)))
-                });
+                rows.Add(new[] { Button("Сьогодні", TaskEditorPayloads.Date(today)) });
                 rows.AddRange(KeyboardLayout.Grid(
-                    Enumerable.Range(2, WeekdayButtons)
+                    Enumerable.Range(1, NextDays)
                         .Select(offset => today.AddDays(offset))
-                        .Select(d => Button(
-                            $"{ScreenText.Capitalize(DateText.Weekday(d.DayOfWeek))} {d.Day:00}.{d.Month:00}",
-                            TaskEditorPayloads.Date(d))), perRow: 3));
+                        .Select(d => Button(DateButton(d, today), TaskEditorPayloads.Date(d))), perRow: 3));
                 rows.Add(new[]
                 {
                     Button("📆 Інша дата", TaskEditorPayloads.OtherDate),
@@ -109,38 +102,17 @@ public static class TaskEditorView
                 rows.Add(new[] { Button("🔙 До дат", TaskEditorPayloads.BackToDates) });
                 break;
 
-            case EditorStep.Hour:
-                rows.Add(new[] { Button("🌤 Без часу", TaskEditorPayloads.NoTime) });
-                rows.AddRange(PickerKeyboards.Hours(0, 23, TaskEditorPayloads.Hour, perRow: 6));
-                break;
-
-            case EditorStep.Minute when dialog.Draft.Hour is { } hour:
-                rows.AddRange(KeyboardLayout.Grid(
-                    MinuteOptions.Select(m => Button($"{hour:00}:{m:00}", TaskEditorPayloads.Minute(m))), perRow: 4));
-                break;
-
             case EditorStep.Repeat:
-                rows.Add(new[] { Button("Не повторювати", TaskEditorPayloads.Repeat(RepeatChoice.None)) });
                 rows.Add(new[]
                 {
                     Button("Щодня", TaskEditorPayloads.Repeat(RepeatChoice.Daily)),
-                    Button("Дні тижня", TaskEditorPayloads.Repeat(RepeatChoice.Weekdays))
+                    Button("Кожні N днів", TaskEditorPayloads.Repeat(RepeatChoice.EveryNDays))
                 });
                 rows.Add(new[]
                 {
-                    Button("Кожні N днів", TaskEditorPayloads.Repeat(RepeatChoice.EveryNDays)),
-                    Button("Щомісяця", TaskEditorPayloads.Repeat(RepeatChoice.Monthly))
+                    Button("Щомісяця", TaskEditorPayloads.Repeat(RepeatChoice.Monthly)),
+                    Button("Щороку", TaskEditorPayloads.Repeat(RepeatChoice.Yearly))
                 });
-                rows.Add(new[] { Button("Щороку", TaskEditorPayloads.Repeat(RepeatChoice.Yearly)) });
-                break;
-
-            case EditorStep.Weekdays:
-                rows.AddRange(KeyboardLayout.Grid(PickerKeyboards.WeekFromMonday.Select(d =>
-                {
-                    var name = ScreenText.Capitalize(DateText.Weekday(d));
-                    return Button(dialog.Draft.Weekdays.Contains(d) ? $"✅ {name}" : name, TaskEditorPayloads.Weekday(d));
-                }), perRow: 4));
-                rows.Add(new[] { Button("✔️ Готово", TaskEditorPayloads.WeekdaysDone) });
                 break;
 
             case EditorStep.Interval:
@@ -177,9 +149,23 @@ public static class TaskEditorView
                 break;
         }
 
-        rows.Add(new[] { Button("✖️ Скасувати", TaskEditorPayloads.Cancel) });
+        // The step's "skip it" choice shares the last row with the way out
+        var lastRow = new List<InlineKeyboardButton>();
+        if (dialog.Step is EditorStep.Hour or EditorStep.Minute)
+            lastRow.Add(Button("🌤 Без часу", TaskEditorPayloads.NoTime));
+        if (dialog.Step == EditorStep.Repeat)
+            lastRow.Add(Button("Не повторювати", TaskEditorPayloads.Repeat(RepeatChoice.None)));
+        lastRow.Add(Button("✖️ Скасувати", TaskEditorPayloads.Cancel));
+        rows.Add(lastRow.ToArray());
+
         return new InlineKeyboardMarkup(rows);
     }
+
+    /// <summary>"Завтра", then "Пн 06.10" and so on.</summary>
+    private static string DateButton(DateOnly date, DateOnly today) =>
+        date == today.AddDays(1)
+            ? "Завтра"
+            : $"{ScreenText.Capitalize(DateText.Weekday(date.DayOfWeek))} {date.Day:00}.{date.Month:00}";
 
     private static InlineKeyboardButton Button(string text, string payload) =>
         InlineKeyboardButton.WithCallbackData(text, payload);

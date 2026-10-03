@@ -22,11 +22,6 @@ public static class PlannerView
     private const int FirstAgendaHour = 5;
     private const int LastAgendaHour = 12;
 
-    private const WeekDays Workdays =
-        WeekDays.Monday | WeekDays.Tuesday | WeekDays.Wednesday | WeekDays.Thursday | WeekDays.Friday;
-    private const WeekDays Weekend = WeekDays.Saturday | WeekDays.Sunday;
-    private const WeekDays AllDays = Workdays | Weekend;
-
     public const string GoneNotice = "⚠️ Цього вже немає";
     public const string ReopenedNotice = "↩️ Задачу повернуто";
     public const string UndoFailedNotice = "ℹ️ Скасувати вже не можна";
@@ -35,7 +30,8 @@ public static class PlannerView
     public const string ChooseWithButtonsError = "⚠️ Оберіть варіант кнопкою";
     public const string WeekTextError = "⚠️ Щоб додати задачу, спершу відкрийте день";
     public const string DateInPastError = "⚠️ Ця дата вже минула";
-    public const string NoWeekdaysError = "⚠️ Оберіть хоча б один день";
+    public const string HourError = "⚠️ Надішліть годину числом від 0 до 23, напр. <code>9</code>";
+    public const string MinutesError = "⚠️ Надішліть хвилини числом від 0 до 59, напр. <code>30</code>";
 
     public static string TooLongError(int maxLength) => $"⚠️ Задовго: максимум {maxLength} символів";
     public static string AddedNotice(string title) => $"✅ Додано: «{HtmlText.Encode(title)}»";
@@ -55,29 +51,48 @@ public static class PlannerView
 
     // ---------- Lists ----------
 
+    /// <summary>The main screen: today's tasks, overdue ones included, and the tasks without a date.</summary>
     /// <param name="completed">A task just completed from this list: the screen offers to undo it.</param>
-    public static BotScreen Day(DayPlanDto day, DateOnly today, int page, string? notice, CompletionDto? completed)
+    public static BotScreen Today(DayPlanDto today, IReadOnlyList<TaskDto> undated, int page, string? notice,
+        CompletionDto? completed)
+    {
+        // One list, no sections: today's tasks come with a time first, then without one,
+        // and the tasks without a date (which have no time either) close it
+        var paged = Paginate(today.Tasks.Concat(undated).ToList(), page);
+
+        var body = new StringBuilder(paged.Items.Count == 0
+            ? "На сьогодні задач немає 🎉"
+            : TaskLines(paged.Items, today.Date, withDate: false, withTopic: true));
+        body.Append(paged.Footer);
+        body.Append(Hint("Надішліть текст — додам задачу на сьогодні"));
+
+        var rows = ListRows(paged, completed);
+        rows.Add(new[] { Button("➕ Нова задача", TaskEditorPayloads.New) });
+        rows.Add(new[] { Button("📅 Завтра", PlannerPayloads.Tomorrow), Button("📆 На тиждень", PlannerPayloads.Week) });
+        rows.Add(new[] { Button("⚙️ Налаштування", PlannerPayloads.Settings), Button("🔙 Меню", BotConstants.Payloads.NavRoot) });
+
+        return new BotScreen(ScreenText.Compose(DayTitle(today.Date, today.Date), body.ToString(), notice), new InlineKeyboardMarkup(rows));
+    }
+
+    /// <summary>A day other than today: tomorrow from the main screen, or a day of the week view.</summary>
+    /// <param name="fromWeek">Opened from the week view, so "🔙 Назад" returns there.</param>
+    /// <param name="completed">A task just completed from this list: the screen offers to undo it.</param>
+    public static BotScreen Day(DayPlanDto day, DateOnly today, bool fromWeek, int page, string? notice, CompletionDto? completed)
     {
         var paged = Paginate(day.Tasks, page);
 
         var body = new StringBuilder(day.Tasks.Count == 0
-            ? day.Date == today ? "На сьогодні задач немає 🎉" : "На цей день задач немає"
+            ? "На цей день задач немає"
             : TaskLines(paged.Items, today, withDate: false, withTopic: true));
         body.Append(paged.Footer);
-        body.Append("\n\n<i>Надішліть текст — додам задачу на цей день</i>");
+        body.Append(Hint("Надішліть текст — додам задачу на цей день"));
 
         var rows = ListRows(paged, completed);
-        if (day.Date == today)
+        rows.Add(new[]
         {
-            rows.Add(new[] { Button("➕ Задача", TaskEditorPayloads.New), Button("📆 Тиждень", PlannerPayloads.Week) });
-            rows.Add(new[] { Button("📥 Без дати", PlannerPayloads.Undated), Button("🗂 Теми", PlannerPayloads.Topics) });
-            rows.Add(new[] { Button("⚙️ Налаштування", PlannerPayloads.Settings), Button("🔙 Меню", BotConstants.Payloads.NavRoot) });
-        }
-        else
-        {
-            rows.Add(new[] { Button("➕ Задача", TaskEditorPayloads.New) });
-            rows.Add(new[] { Button("🔙 Тиждень", PlannerPayloads.Week), Button("📅 Сьогодні", PlannerPayloads.Home) });
-        }
+            Button("➕ Нова задача", TaskEditorPayloads.New),
+            Button("🔙 Назад", fromWeek ? PlannerPayloads.Week : PlannerPayloads.Home)
+        });
 
         return new BotScreen(ScreenText.Compose(DayTitle(day.Date, today), body.ToString(), notice), new InlineKeyboardMarkup(rows));
     }
@@ -107,31 +122,16 @@ public static class PlannerView
         return new BotScreen(ScreenText.Compose("📆 Тиждень", body.ToString().TrimEnd(), notice), new InlineKeyboardMarkup(rows));
     }
 
-    public static BotScreen Undated(IReadOnlyList<TaskDto> tasks, DateOnly today, int page, string? notice, CompletionDto? completed)
-    {
-        var paged = Paginate(tasks, page);
-
-        var body = new StringBuilder(tasks.Count == 0
-            ? "Задач без дати немає"
-            : TaskLines(paged.Items, today, withDate: false, withTopic: true));
-        body.Append(paged.Footer);
-        body.Append("\n\n<i>Надішліть текст — додам задачу без дати</i>");
-
-        var rows = ListRows(paged, completed);
-        rows.Add(new[] { Button("➕ Задача", TaskEditorPayloads.New), Button("🔙 Назад", PlannerPayloads.Home) });
-
-        return new BotScreen(ScreenText.Compose("📥 Без дати", body.ToString(), notice), new InlineKeyboardMarkup(rows));
-    }
-
+    /// <summary>Topics live under "⚙️ Налаштування", so "🔙 Назад" returns there.</summary>
     public static BotScreen Topics(IReadOnlyList<TopicDto> topics, string? notice)
     {
         var body = new StringBuilder(topics.Count == 0
             ? "Тем поки немає"
             : string.Join('\n', topics.Select(t => $"{HtmlText.Encode(t.Name)} · {TasksCount(t.OpenTasks)}")));
-        body.Append("\n\n<i>Надішліть назву — додам нову тему</i>");
+        body.Append(Hint("Надішліть назву — додам нову тему"));
 
         var rows = KeyboardLayout.Pack(topics.Select(t => Button(t.Name, PlannerPayloads.Topic(t.Id)))).ToList();
-        rows.Add(new[] { Button("➕ Нова тема", PlannerPayloads.NewTopic), Button("🔙 Назад", PlannerPayloads.Home) });
+        rows.Add(new[] { Button("➕ Нова тема", PlannerPayloads.NewTopic), Button("🔙 Назад", PlannerPayloads.Settings) });
 
         return new BotScreen(ScreenText.Compose("🗂 Теми", body.ToString(), notice), new InlineKeyboardMarkup(rows));
     }
@@ -170,7 +170,7 @@ public static class PlannerView
             ? "У цій темі задач немає"
             : TaskLines(paged.Items, today, withDate: true, withTopic: false));
         body.Append(paged.Footer);
-        body.Append("\n\n<i>Надішліть текст — додам задачу в цю тему (без дати)</i>");
+        body.Append(Hint("Надішліть текст — додам задачу в цю тему (без дати)"));
 
         var rows = ListRows(paged, completed);
         rows.Add(new[] { Button("➕ Задача", TaskEditorPayloads.New), Button("🗑 Видалити тему", PlannerPayloads.DeleteTopic(topic.Topic.Id)) });
@@ -239,6 +239,8 @@ public static class PlannerView
         var body = $"☀️ Ранковий список задач на сьогодні: {state}\n\nОберіть годину:";
 
         var rows = PickerKeyboards.Hours(FirstAgendaHour, LastAgendaHour, PlannerPayloads.AgendaHour).ToList();
+        rows.Add(new[] { Button("🗂 Теми", PlannerPayloads.Topics) });
+
         var lastRow = new List<InlineKeyboardButton>();
         if (settings.AgendaHour is not null)
             lastRow.Add(Button("🔕 Вимкнути", PlannerPayloads.AgendaOff));
@@ -305,7 +307,6 @@ public static class PlannerView
     {
         RepeatKind.Daily => "щодня",
         RepeatKind.EveryNDays => $"кожні {DateText.Days(repeat.Interval)}",
-        RepeatKind.Weekly => WeekdaysLabel(repeat.Days),
         RepeatKind.Monthly => $"щомісяця {repeat.AnchorDay}-го",
         _ => $"щороку {repeat.AnchorDay:00}.{repeat.AnchorMonth:00}"
     };
@@ -315,17 +316,8 @@ public static class PlannerView
     {
         RepeatKind.Daily => "щодня",
         RepeatKind.EveryNDays => $"кожні {DateText.Days(repeat.Interval)}",
-        RepeatKind.Weekly => WeekdaysLabel(repeat.Days),
         RepeatKind.Monthly => date is { } d ? $"щомісяця {d.Day}-го" : "щомісяця",
         _ => date is { } d ? $"щороку {d.Day:00}.{d.Month:00}" : "щороку"
-    };
-
-    public static string WeekdaysLabel(WeekDays days) => days switch
-    {
-        AllDays => "щодня",
-        Workdays => "по буднях",
-        Weekend => "по вихідних",
-        _ => string.Join(", ", PickerKeyboards.WeekFromMonday.Where(d => days.Contains(d)).Select(DateText.Weekday))
     };
 
     /// <param name="minutesBefore">Null when there is no reminder.</param>
@@ -375,7 +367,7 @@ public static class PlannerView
     private static string TaskLines(IEnumerable<TaskDto> tasks, DateOnly today, bool withDate, bool withTopic) =>
         string.Join('\n', tasks.Select(t => TaskLine(t, today, withDate, withTopic)));
 
-    /// <summary>"09:30 Подзвонити в банк 🔁 🔔 · 💼 Робота".</summary>
+    /// <summary>"09:30 Подзвонити в банк 🔁 🔔 · 💼 Робота"; a task for the whole day has "-" instead of a time.</summary>
     private static string TaskLine(TaskDto task, DateOnly today, bool withDate, bool withTopic)
     {
         var line = new StringBuilder();
@@ -384,7 +376,7 @@ public static class PlannerView
         if (withDate && task.DueDate is { } date)
             line.Append(DateText.Short(date)).Append(' ');
 
-        line.Append(task.DueTime is { } time ? $"<code>{Time(time)}</code>" : "▫️");
+        line.Append(task.DueTime is { } time ? $"<code>{Time(time)}</code>" : "-");
         line.Append(' ').Append(HtmlText.Encode(task.Title));
 
         if (task.IsRepeated)
@@ -396,6 +388,9 @@ public static class PlannerView
 
         return line.ToString();
     }
+
+    /// <summary>A hint under the list, set off from it by a line: "Надішліть текст — …".</summary>
+    private static string Hint(string text) => $"\n{ScreenText.Separator}\n<i>{text}</i>";
 
     private static string TaskButton(TaskDto task) =>
         task.DueTime is { } time ? $"{Time(time)} {task.Title}" : task.Title;

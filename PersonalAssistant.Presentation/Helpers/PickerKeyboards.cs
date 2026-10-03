@@ -44,9 +44,9 @@ public static class PickerKeyboards
     }
 
     /// <summary>"07:00" … "22:00" for hours from <paramref name="first"/> to <paramref name="last"/>.</summary>
-    public static IEnumerable<InlineKeyboardButton[]> Hours(int first, int last, Func<int, string> payload, int perRow = 4) =>
+    public static IEnumerable<InlineKeyboardButton[]> Hours(int first, int last, Func<int, string> payload) =>
         KeyboardLayout.Grid(
-            Enumerable.Range(first, last - first + 1).Select(h => Button($"{h:00}:00", payload(h))), perRow);
+            Enumerable.Range(first, last - first + 1).Select(h => Button($"{h:00}:00", payload(h))), perRow: 4);
 
     private static string MonthLabel(DateOnly month, DateOnly today) =>
         month.Year == today.Year

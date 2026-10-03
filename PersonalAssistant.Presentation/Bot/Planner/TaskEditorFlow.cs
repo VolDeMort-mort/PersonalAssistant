@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using MediatR;
 using PersonalAssistant.Application.Common;
 using PersonalAssistant.Application.Features.Planner.Commands;
@@ -78,7 +79,6 @@ public class TaskEditorFlow
         };
         dialog.Draft.Title = task.Title;
         dialog.Draft.Date = task.DueDate;
-        dialog.Draft.Weekdays = task.Repeat is { Kind: RepeatKind.Weekly } repeat ? repeat.Days : WeekDays.None;
 
         await RenderAsync(chatId, dialog, error: null, ct);
     }
@@ -163,34 +163,10 @@ public class TaskEditorFlow
 
     // ---------- Time ----------
 
-    public async Task ChooseHourAsync(long chatId, int hour, CancellationToken ct)
-    {
-        if (!TryGetDialog(chatId, out var dialog, EditorStep.Hour) || hour is < 0 or > 23)
-        {
-            await CancelAsync(chatId, ct);
-            return;
-        }
-
-        dialog.Draft.Hour = hour;
-        dialog.Step = EditorStep.Minute;
-        await RenderAsync(chatId, dialog, error: null, ct);
-    }
-
-    public async Task ChooseMinuteAsync(long chatId, int minute, CancellationToken ct)
-    {
-        if (!TryGetDialog(chatId, out var dialog, EditorStep.Minute) || dialog.Draft.Hour is not { } hour
-            || !TaskEditorView.MinuteOptions.Contains(minute))
-        {
-            await CancelAsync(chatId, ct);
-            return;
-        }
-
-        await OnTimeChosenAsync(chatId, dialog, new TimeOnly(hour, minute), ct);
-    }
-
+    /// <summary>"Без часу", on the hour step or the minutes step.</summary>
     public async Task NoTimeAsync(long chatId, CancellationToken ct)
     {
-        if (!TryGetDialog(chatId, out var dialog, EditorStep.Hour))
+        if (!TryGetDialog(chatId, out var dialog, EditorStep.Hour, EditorStep.Minute))
         {
             await CancelAsync(chatId, ct);
             return;
@@ -211,14 +187,6 @@ public class TaskEditorFlow
 
         switch (choice)
         {
-            case RepeatChoice.Weekdays:
-                // Starts with the task's own weekday switched on
-                if (dialog.Draft.Weekdays == WeekDays.None)
-                    dialog.Draft.Weekdays = (dialog.Draft.Date ?? _time.GetLocalToday()).DayOfWeek.ToWeekDays();
-                dialog.Step = EditorStep.Weekdays;
-                await RenderAsync(chatId, dialog, error: null, ct);
-                break;
-
             case RepeatChoice.EveryNDays:
                 dialog.Step = EditorStep.Interval;
                 await RenderAsync(chatId, dialog, error: null, ct);
@@ -235,36 +203,6 @@ public class TaskEditorFlow
                 await OnRepeatChosenAsync(chatId, dialog, repeat, ct);
                 break;
         }
-    }
-
-    /// <param name="day">A <see cref="DayOfWeek"/> number: 0 is Sunday.</param>
-    public async Task ToggleWeekdayAsync(long chatId, int day, CancellationToken ct)
-    {
-        if (!TryGetDialog(chatId, out var dialog, EditorStep.Weekdays) || day is < 0 or > 6)
-        {
-            await CancelAsync(chatId, ct);
-            return;
-        }
-
-        dialog.Draft.Weekdays ^= ((DayOfWeek)day).ToWeekDays();
-        await RenderAsync(chatId, dialog, error: null, ct);
-    }
-
-    public async Task WeekdaysDoneAsync(long chatId, CancellationToken ct)
-    {
-        if (!TryGetDialog(chatId, out var dialog, EditorStep.Weekdays))
-        {
-            await CancelAsync(chatId, ct);
-            return;
-        }
-
-        if (dialog.Draft.Weekdays == WeekDays.None)
-        {
-            await RenderAsync(chatId, dialog, PlannerView.NoWeekdaysError, ct);
-            return;
-        }
-
-        await OnRepeatChosenAsync(chatId, dialog, new RepeatInput(RepeatKind.Weekly, Days: dialog.Draft.Weekdays), ct);
     }
 
     public async Task ChooseIntervalAsync(long chatId, int days, CancellationToken ct)
@@ -370,6 +308,12 @@ public class TaskEditorFlow
             case EditorStep.Title:
                 await OnTitleAsync(chatId, dialog, text, ct);
                 break;
+            case EditorStep.Hour:
+                await OnHourAsync(chatId, dialog, text, ct);
+                break;
+            case EditorStep.Minute:
+                await OnMinutesAsync(chatId, dialog, text, ct);
+                break;
             // Typing on the topic step is a shortcut for "➕ Нова тема"
             case EditorStep.Topic:
             case EditorStep.NewTopicName:
@@ -398,6 +342,38 @@ public class TaskEditorFlow
         dialog.Draft.Title = title;
         dialog.Step = EditorStep.Date;
         await RenderAsync(chatId, dialog, error: null, ct);
+    }
+
+    private async Task OnHourAsync(long chatId, PlannerDialog dialog, string text, CancellationToken ct)
+    {
+        if (!TryParseNumber(text, max: 23, out var hour))
+        {
+            await RenderAsync(chatId, dialog, PlannerView.HourError, ct);
+            return;
+        }
+
+        // Right away the minutes: the hour is shown, the minutes wait under a spoiler
+        dialog.Draft.Hour = hour;
+        dialog.Step = EditorStep.Minute;
+        await RenderAsync(chatId, dialog, error: null, ct);
+    }
+
+    private async Task OnMinutesAsync(long chatId, PlannerDialog dialog, string text, CancellationToken ct)
+    {
+        if (dialog.Draft.Hour is not { } hour)
+        {
+            dialog.Step = EditorStep.Hour;
+            await RenderAsync(chatId, dialog, error: null, ct);
+            return;
+        }
+
+        if (!TryParseNumber(text, max: 59, out var minutes))
+        {
+            await RenderAsync(chatId, dialog, PlannerView.MinutesError, ct);
+            return;
+        }
+
+        await OnTimeChosenAsync(chatId, dialog, new TimeOnly(hour, minutes), ct);
     }
 
     private async Task OnNewTopicAsync(long chatId, PlannerDialog dialog, string name, CancellationToken ct)
@@ -432,6 +408,7 @@ public class TaskEditorFlow
             return;
         }
 
+        dialog.Draft.Hour = null;
         dialog.Step = EditorStep.Hour;
         await RenderAsync(chatId, dialog, error: null, ct);
     }
@@ -551,6 +528,10 @@ public class TaskEditorFlow
         var screen = TaskEditorView.Step(dialog, topics, _time.GetLocalToday(), error);
         await _planner.RenderAsync(chatId, dialog, screen, ct);
     }
+
+    /// <summary>A whole number from 0 to <paramref name="max"/>, e.g. "9" or "09".</summary>
+    private static bool TryParseNumber(string text, int max, out int number) =>
+        int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out number) && number <= max;
 
     /// <summary>A button of an old step (or of no editor at all) must not act on the current one.</summary>
     private bool TryGetDialog(long chatId, [NotNullWhen(true)] out PlannerDialog? dialog, params EditorStep[] steps)

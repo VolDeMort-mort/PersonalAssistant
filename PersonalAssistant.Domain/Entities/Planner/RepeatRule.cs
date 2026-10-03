@@ -20,9 +20,6 @@ public sealed record RepeatRule
     /// <summary>Days between occurrences; 1 for <see cref="RepeatKind.Daily"/>, 0 when not used.</summary>
     public int Interval { get; private init; }
 
-    /// <summary>Weekdays of <see cref="RepeatKind.Weekly"/>; <see cref="WeekDays.None"/> for other kinds.</summary>
-    public WeekDays Days { get; private init; }
-
     /// <summary>
     /// Month of <see cref="RepeatKind.Yearly"/>; 0 for other kinds.
     /// Stored, not taken from the due date: a task moved to the next day must still come back to its own date.
@@ -43,15 +40,6 @@ public sealed record RepeatRule
             throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Must be from {MinInterval} to {MaxInterval}.");
 
         return new RepeatRule { Kind = RepeatKind.EveryNDays, Interval = interval };
-    }
-
-    public static RepeatRule Weekly(WeekDays days)
-    {
-        const WeekDays allDays = (WeekDays)0b111_1111;
-        if (days == WeekDays.None || (days & ~allDays) != 0)
-            throw new ArgumentException("Choose at least one weekday.", nameof(days));
-
-        return new RepeatRule { Kind = RepeatKind.Weekly, Days = days };
     }
 
     public static RepeatRule Monthly(int anchorDay)
@@ -82,7 +70,6 @@ public sealed record RepeatRule
     {
         RepeatKind.Daily => date.AddDays(1),
         RepeatKind.EveryNDays => date.AddDays(Interval),
-        RepeatKind.Weekly => NextWeekdayAfter(date),
         RepeatKind.Monthly => NextMonthDayAfter(date),
         RepeatKind.Yearly => NextYearDayAfter(date),
         _ => throw new InvalidOperationException($"Unknown repeat kind {Kind}.")
@@ -90,7 +77,7 @@ public sealed record RepeatRule
 
     /// <summary>
     /// <paramref name="date"/> itself when it fits the rule, otherwise the nearest occurrence after it:
-    /// "Mon, Wed, Fri" chosen on a Tuesday starts on Wednesday.
+    /// "monthly on the 31st" chosen in April starts on the 30th.
     /// </summary>
     public DateOnly FirstOnOrAfter(DateOnly date) =>
         Kind is RepeatKind.Daily or RepeatKind.EveryNDays ? date : NextAfter(date.AddDays(-1));
@@ -106,18 +93,6 @@ public sealed record RepeatRule
             if (date >= from)
                 yield return date;
         }
-    }
-
-    private DateOnly NextWeekdayAfter(DateOnly date)
-    {
-        for (var offset = 1; offset <= 7; offset++)
-        {
-            var candidate = date.AddDays(offset);
-            if (Days.Contains(candidate.DayOfWeek))
-                return candidate;
-        }
-
-        throw new InvalidOperationException("A weekly rule without weekdays.");
     }
 
     private DateOnly NextMonthDayAfter(DateOnly date)

@@ -27,9 +27,9 @@ public static class PlannerPayloads
     public static class Actions
     {
         public const string Home = "home";
+        public const string Tomorrow = "tomorrow";
         public const string Day = "day";
         public const string Week = "week";
-        public const string Undated = "undated";
         public const string Topics = "topics";
         public const string Topic = "topic";
         public const string NewTopic = "newtopic";
@@ -56,8 +56,8 @@ public static class PlannerPayloads
     }
 
     public const string Home = Prefix + Actions.Home;
+    public const string Tomorrow = Prefix + Actions.Tomorrow;
     public const string Week = Prefix + Actions.Week;
-    public const string Undated = Prefix + Actions.Undated;
     public const string Topics = Prefix + Actions.Topics;
     public const string NewTopic = Prefix + Actions.NewTopic;
     public const string Back = Prefix + Actions.Back;
@@ -66,6 +66,7 @@ public static class PlannerPayloads
     public const string ReminderClose = Prefix + Actions.ReminderClose;
     public const string OpenFromAgenda = Prefix + Actions.OpenFromAgenda;
 
+    /// <summary>A day of the week view.</summary>
     public static string Day(DateOnly date) => Build(Actions.Day, FormatDate(date));
     public static string Topic(Guid id) => Build(Actions.Topic, id.ToString("N"));
     public static string DeleteTopic(Guid id) => Build(Actions.DeleteTopic, id.ToString("N"));

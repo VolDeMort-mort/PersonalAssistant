@@ -20,7 +20,6 @@ public class PlannerTaskConfiguration : IEntityTypeConfiguration<PlannerTask>
             // Required inside a rule, so a NULL kind is read back as "no repeat"
             repeat.Property(r => r.Kind).HasColumnName("RepeatKind").IsRequired();
             repeat.Property(r => r.Interval).HasColumnName("RepeatInterval");
-            repeat.Property(r => r.Days).HasColumnName("RepeatDays");
             repeat.Property(r => r.AnchorMonth).HasColumnName("RepeatAnchorMonth");
             repeat.Property(r => r.AnchorDay).HasColumnName("RepeatAnchorDay");
         });

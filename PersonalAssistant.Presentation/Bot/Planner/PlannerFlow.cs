@@ -42,14 +42,17 @@ public class PlannerFlow
     public Task ShowHomeAsync(long chatId, string? notice, CancellationToken ct) =>
         ShowListAsync(chatId, PlannerList.Day(_time.GetLocalToday()), page: 0, notice, completed: null, ct);
 
-    public Task ShowDayAsync(long chatId, DateOnly date, CancellationToken ct) =>
-        ShowListAsync(chatId, PlannerList.Day(date), page: 0, notice: null, completed: null, ct);
+    public Task ShowTomorrowAsync(long chatId, CancellationToken ct) =>
+        ShowListAsync(chatId, PlannerList.Day(_time.GetLocalToday().AddDays(1)), page: 0, notice: null, completed: null, ct);
+
+    /// <summary>A day picked in the week view; today is the main screen itself.</summary>
+    public Task ShowWeekDayAsync(long chatId, DateOnly date, CancellationToken ct) =>
+        date == _time.GetLocalToday()
+            ? ShowHomeAsync(chatId, notice: null, ct)
+            : ShowListAsync(chatId, PlannerList.Day(date, fromWeek: true), page: 0, notice: null, completed: null, ct);
 
     public Task ShowWeekAsync(long chatId, CancellationToken ct) =>
         ShowListAsync(chatId, PlannerList.Week, page: 0, notice: null, completed: null, ct);
-
-    public Task ShowUndatedAsync(long chatId, CancellationToken ct) =>
-        ShowListAsync(chatId, PlannerList.Undated, page: 0, notice: null, completed: null, ct);
 
     public Task ShowTopicsAsync(long chatId, string? notice, CancellationToken ct) =>
         ShowListAsync(chatId, PlannerList.Topics, page: 0, notice, completed: null, ct);
@@ -302,12 +305,9 @@ public class PlannerFlow
 
         var screen = list.Kind switch
         {
-            PlannerListKind.Day =>
-                PlannerView.Day(await _sender.Send(new GetDayQuery(chatId, list.Date!.Value), ct), today, page, notice, completed),
+            PlannerListKind.Day => await DayScreenAsync(chatId, list, today, page, notice, completed, ct),
             PlannerListKind.Week =>
                 PlannerView.Week(await _sender.Send(new GetWeekQuery(chatId), ct), today, notice),
-            PlannerListKind.Undated =>
-                PlannerView.Undated(await _sender.Send(new GetUndatedTasksQuery(chatId), ct), today, page, notice, completed),
             PlannerListKind.Topics =>
                 PlannerView.Topics(await _sender.Send(new GetTopicsQuery(chatId), ct), notice),
             _ =>
@@ -316,5 +316,17 @@ public class PlannerFlow
         };
 
         await RenderAsync(chatId, new PlannerDialog(list) { Page = page }, screen, ct, newWindow);
+    }
+
+    /// <summary>Today is the main screen, which also lists the tasks without a date; other days list only their own.</summary>
+    private async Task<BotScreen> DayScreenAsync(long chatId, PlannerList list, DateOnly today, int page, string? notice,
+        CompletionDto? completed, CancellationToken ct)
+    {
+        var day = await _sender.Send(new GetDayQuery(chatId, list.Date!.Value), ct);
+        if (day.Date != today)
+            return PlannerView.Day(day, today, list.FromWeek, page, notice, completed);
+
+        var undated = await _sender.Send(new GetUndatedTasksQuery(chatId), ct);
+        return PlannerView.Today(day, undated, page, notice, completed);
     }
 }

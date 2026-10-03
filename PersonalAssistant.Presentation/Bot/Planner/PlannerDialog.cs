@@ -1,5 +1,4 @@
 using PersonalAssistant.Application.Features.Planner.Dtos;
-using PersonalAssistant.Domain.Entities.Planner;
 
 namespace PersonalAssistant.Presentation.Bot.Planner;
 
@@ -21,10 +20,14 @@ public enum EditorStep
     Date,
     Month,
     Day,
+
+    /// <summary>The hour of the time, typed.</summary>
     Hour,
+
+    /// <summary>The minutes of the time, typed once the hour is known.</summary>
     Minute,
+
     Repeat,
-    Weekdays,
     Interval,
     Reminder,
     ReminderHours,
@@ -52,13 +55,11 @@ public class TaskDraft
     /// <summary>Month picked under "📆 Інша дата", as its first day.</summary>
     public DateOnly? Month { get; set; }
 
+    /// <summary>Hour typed on the time step; the minutes are asked for next.</summary>
     public int? Hour { get; set; }
+
     public TimeOnly? Time { get; set; }
     public RepeatInput? Repeat { get; set; }
-
-    /// <summary>Weekdays toggled on the "Дні тижня" step.</summary>
-    public WeekDays Weekdays { get; set; }
-
     public int? RemindMinutesBefore { get; set; }
     public Guid? TopicId { get; set; }
     public string? TopicName { get; set; }

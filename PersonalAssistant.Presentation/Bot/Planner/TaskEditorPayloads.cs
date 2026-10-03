@@ -14,7 +14,6 @@ public record TaskEditorAction(string Name, string? Arg) : CallbackAction(Name, 
     {
         "n" => RepeatChoice.None,
         "d" => RepeatChoice.Daily,
-        "w" => RepeatChoice.Weekdays,
         "i" => RepeatChoice.EveryNDays,
         "m" => RepeatChoice.Monthly,
         "y" => RepeatChoice.Yearly,
@@ -22,12 +21,11 @@ public record TaskEditorAction(string Name, string? Arg) : CallbackAction(Name, 
     };
 }
 
-/// <summary>Buttons of the repeat step; the weekday and interval ones lead to one more step.</summary>
+/// <summary>Buttons of the repeat step; "Кожні N днів" leads to one more step.</summary>
 public enum RepeatChoice
 {
     None,
     Daily,
-    Weekdays,
     EveryNDays,
     Monthly,
     Yearly
@@ -54,12 +52,8 @@ public static class TaskEditorPayloads
         public const string Month = "mon";
         public const string Day = "day";
         public const string BackToDates = "dates";
-        public const string Hour = "hour";
-        public const string Minute = "min";
         public const string NoTime = "notime";
         public const string Repeat = "rep";
-        public const string Weekday = "wd";
-        public const string WeekdaysDone = "wdok";
         public const string Interval = "int";
         public const string Reminder = "rem";
         public const string OtherReminder = "remother";
@@ -77,7 +71,6 @@ public static class TaskEditorPayloads
     public const string NoDate = Prefix + Actions.NoDate;
     public const string BackToDates = Prefix + Actions.BackToDates;
     public const string NoTime = Prefix + Actions.NoTime;
-    public const string WeekdaysDone = Prefix + Actions.WeekdaysDone;
     public const string OtherReminder = Prefix + Actions.OtherReminder;
     public const string NoReminder = Prefix + Actions.NoReminder;
     public const string NoTopic = Prefix + Actions.NoTopic;
@@ -98,9 +91,6 @@ public static class TaskEditorPayloads
     public static string Date(DateOnly date) => Build(Actions.Date, PlannerPayloads.FormatDate(date));
     public static string Month(DateOnly month) => Build(Actions.Month, $"{month.Year:0000}{month.Month:00}");
     public static string Day(int day) => Build(Actions.Day, Number(day));
-    public static string Hour(int hour) => Build(Actions.Hour, Number(hour));
-    public static string Minute(int minute) => Build(Actions.Minute, Number(minute));
-    public static string Weekday(DayOfWeek day) => Build(Actions.Weekday, Number((int)day));
     public static string Interval(int days) => Build(Actions.Interval, Number(days));
     public static string Reminder(int minutesBefore) => Build(Actions.Reminder, Number(minutesBefore));
     public static string ReminderHours(int hours) => Build(Actions.ReminderHours, Number(hours));
@@ -109,7 +99,6 @@ public static class TaskEditorPayloads
     public static string Repeat(RepeatChoice choice) => Build(Actions.Repeat, choice switch
     {
         RepeatChoice.Daily => "d",
-        RepeatChoice.Weekdays => "w",
         RepeatChoice.EveryNDays => "i",
         RepeatChoice.Monthly => "m",
         RepeatChoice.Yearly => "y",

@@ -4,7 +4,7 @@ using PersonalAssistant.Application.Interfaces;
 
 namespace PersonalAssistant.Application.Features.Planner.Queries;
 
-/// <summary>"📥 Без дати": tasks for someday.</summary>
+/// <summary>Tasks for someday: the "📥 Без дати" part of the main screen.</summary>
 public record GetUndatedTasksQuery(long ChatId) : IRequest<IReadOnlyList<TaskDto>>;
 
 public class GetUndatedTasksQueryHandler : IRequestHandler<GetUndatedTasksQuery, IReadOnlyList<TaskDto>>

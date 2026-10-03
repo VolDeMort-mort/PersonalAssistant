@@ -370,10 +370,6 @@ namespace PersonalAssistant.Infrastructure.Migrations
                                 .HasColumnType("int")
                                 .HasColumnName("RepeatAnchorMonth");
 
-                            b1.Property<int>("Days")
-                                .HasColumnType("int")
-                                .HasColumnName("RepeatDays");
-
                             b1.Property<int>("Interval")
                                 .HasColumnType("int")
                                 .HasColumnName("RepeatInterval");

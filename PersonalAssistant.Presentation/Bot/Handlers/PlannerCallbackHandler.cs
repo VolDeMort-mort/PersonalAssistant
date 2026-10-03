@@ -28,9 +28,9 @@ public class PlannerCallbackHandler : ICallbackHandler
             await (action switch
             {
                 { Name: Actions.Home } => _flow.OpenAsync(chatId, ct),
-                { Name: Actions.Day, Date: { } date } => _flow.ShowDayAsync(chatId, date, ct),
+                { Name: Actions.Tomorrow } => _flow.ShowTomorrowAsync(chatId, ct),
+                { Name: Actions.Day, Date: { } date } => _flow.ShowWeekDayAsync(chatId, date, ct),
                 { Name: Actions.Week } => _flow.ShowWeekAsync(chatId, ct),
-                { Name: Actions.Undated } => _flow.ShowUndatedAsync(chatId, ct),
                 { Name: Actions.Topics } => _flow.ShowTopicsAsync(chatId, notice: null, ct),
                 { Name: Actions.Topic, Id: { } id } => _flow.ShowTopicAsync(chatId, id, ct),
                 { Name: Actions.NewTopic } => _flow.AskNewTopicAsync(chatId, error: null, ct),
