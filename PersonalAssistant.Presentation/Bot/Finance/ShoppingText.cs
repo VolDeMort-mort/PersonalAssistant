@@ -67,8 +67,8 @@ public static partial class ShoppingText
         return (line, null);
     }
 
-    /// <summary>"rozetka.com.ua" for a link shared without a name: renaming it is one tap away.</summary>
-    private static string HostOf(string link)
+    /// <summary>"rozetka.com.ua": the name of a link shared without one, and the text of links on screens.</summary>
+    public static string HostOf(string link)
     {
         var host = new Uri(link).Host;
         return host.StartsWith("www.", StringComparison.OrdinalIgnoreCase) ? host[4..] : host;
