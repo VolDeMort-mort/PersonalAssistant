@@ -34,6 +34,9 @@ public class FinanceTransaction
     public Guid? ScheduledPaymentId { get; private set; }
     public DateOnly? PaidForDate { get; private set; }
 
+    /// <summary>The shopping list item this transaction bought, so undoing it can put the item back on the list.</summary>
+    public Guid? ShoppingItemId { get; private set; }
+
     /// <summary>
     /// Chat and direction come from the category, so they can never disagree with it.
     /// </summary>
@@ -60,6 +63,15 @@ public class FinanceTransaction
         var transaction = Create(category, amount, title, createdAtUtc);
         transaction.ScheduledPaymentId = scheduledPaymentId;
         transaction.PaidForDate = dueDate;
+        return transaction;
+    }
+
+    /// <summary>Only <see cref="ShoppingItem.Buy"/> creates these, together with marking the item bought.</summary>
+    internal static FinanceTransaction CreateForShoppingItem(FinanceCategory category, long amount, string title,
+        Guid shoppingItemId, DateTime createdAtUtc)
+    {
+        var transaction = Create(category, amount, title, createdAtUtc);
+        transaction.ShoppingItemId = shoppingItemId;
         return transaction;
     }
 

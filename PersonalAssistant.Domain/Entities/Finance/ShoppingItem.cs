@@ -89,6 +89,29 @@ public class ShoppingItem
     }
 
     /// <summary>
+    /// "✅ Куплено": records the expense with the amount actually paid, and the item becomes a record of the purchase.
+    /// An item without a category is bought in <paramref name="category"/>; one with a category, only in its own.
+    /// </summary>
+    /// <param name="amount">What was actually paid; may differ from <see cref="Price"/>.</param>
+    public FinanceTransaction Buy(FinanceCategory category, long amount, DateTime boughtAtUtc)
+    {
+        ArgumentNullException.ThrowIfNull(category);
+        EnsureOnList();
+        EnsureExpenseCategory(category);
+        if (CategoryId is { } own && own != category.Id)
+            throw new ArgumentException("The item belongs to another category.", nameof(category));
+
+        var transaction = FinanceTransaction.CreateForShoppingItem(category, amount, Title, Id, boughtAtUtc);
+
+        CategoryId = category.Id;
+        BoughtAt = transaction.CreatedAt;
+        return transaction;
+    }
+
+    /// <summary>Undo of <see cref="Buy"/>, when its expense is deleted: the item is back on the list.</summary>
+    public void RevertPurchase() => BoughtAt = null;
+
+    /// <summary>
     /// "🔁 Купити ще раз": a new item on the list with the same title, price, link and category.
     /// This one stays as it is, a record of the earlier purchase.
     /// </summary>
