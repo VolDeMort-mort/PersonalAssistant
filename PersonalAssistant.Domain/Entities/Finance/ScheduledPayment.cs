@@ -135,6 +135,27 @@ public class ScheduledPayment
 
     public bool IsOverdue(DateOnly today) => IsActive && NextDueDate < today;
 
+    /// <summary>
+    /// Due dates still to be paid between <paramref name="from"/> and <paramref name="to"/>, both included:
+    /// the current one and, for a repeated payment, the ones after it, on the same rules as paying moves it on.
+    /// A finished payment has none.
+    /// </summary>
+    public IEnumerable<DateOnly> DueDatesBetween(DateOnly from, DateOnly to)
+    {
+        if (!IsActive)
+            yield break;
+
+        for (var date = NextDueDate; date <= to; date = NextDateAfter(date))
+        {
+            if (date >= from)
+                yield return date;
+
+            // A one-time payment has only one date: NextDateAfter would return it again
+            if (Recurrence == Recurrence.Once)
+                yield break;
+        }
+    }
+
     private DateOnly NextDateAfter(DateOnly date) => Recurrence switch
     {
         Recurrence.Weekly => date.AddDays(7),
