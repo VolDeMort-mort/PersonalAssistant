@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using MediatR;
+using PersonalAssistant.Application.Common;
 using PersonalAssistant.Application.Common.Exceptions;
 using PersonalAssistant.Application.Features.Finance.Commands;
 using PersonalAssistant.Application.Features.Finance.Dtos;
@@ -20,13 +21,15 @@ public class FinanceFlow
     private readonly IBotMessenger _messenger;
     private readonly IDialogStore _dialogs;
     private readonly IScreenTracker _screens;
+    private readonly TimeProvider _time;
 
-    public FinanceFlow(ISender sender, IBotMessenger messenger, IDialogStore dialogs, IScreenTracker screens)
+    public FinanceFlow(ISender sender, IBotMessenger messenger, IDialogStore dialogs, IScreenTracker screens, TimeProvider time)
     {
         _sender = sender;
         _messenger = messenger;
         _dialogs = dialogs;
         _screens = screens;
+        _time = time;
     }
 
     // ---------- Screens ----------
@@ -72,29 +75,55 @@ public class FinanceFlow
         await ShowAsync(chatId, FinanceView.TemplateCard(template), ct);
     }
 
-    public async Task ShowHistoryAsync(long chatId, int page, string? notice, CancellationToken ct)
+    // ---------- Calendar ----------
+
+    /// <param name="month">Any day of the month.</param>
+    public async Task ShowCalendarAsync(long chatId, DateOnly month, CancellationToken ct)
     {
         _dialogs.Remove(chatId);
 
-        var history = await _sender.Send(new GetHistoryQuery(chatId, page), ct);
+        var calendar = await _sender.Send(new GetPaymentCalendarQuery(chatId, month), ct);
+        await ShowAsync(chatId, CalendarView.Month(calendar, _time.GetLocalToday()), ct);
+    }
+
+    /// <param name="recordedId">A planned expense just paid from this day: the screen confirms it and offers undo.</param>
+    public async Task ShowDayAsync(long chatId, DateOnly date, string? notice, Guid? recordedId, CancellationToken ct)
+    {
+        _dialogs.Remove(chatId);
+
+        var day = await _sender.Send(new GetFinanceDayQuery(chatId, date), ct);
+        var recorded = recordedId is { } id
+            ? await _sender.Send(new GetTransactionQuery(chatId, id), ct)
+            : null;
+
+        await ShowAsync(chatId, CalendarView.Day(day, _time.GetLocalToday(), notice, recorded), ct);
+    }
+
+    /// <summary>Operations of a month, from its calendar.</summary>
+    /// <param name="month">Any day of the month.</param>
+    public async Task ShowHistoryAsync(long chatId, DateOnly month, int page, string? notice, CancellationToken ct)
+    {
+        _dialogs.Remove(chatId);
+
+        var history = await _sender.Send(new GetHistoryQuery(chatId, month, page), ct);
         await ShowAsync(chatId, FinanceView.History(history, notice), ct);
     }
 
-    /// <param name="page">History page to return to.</param>
+    /// <param name="back">Where the card was opened from: a page of a month's operations or a calendar day.</param>
     /// <param name="confirmDelete">Asks "delete it?" instead of showing the plain card.</param>
-    public async Task ShowTransactionAsync(long chatId, Guid transactionId, int page, bool confirmDelete, CancellationToken ct)
+    public async Task ShowTransactionAsync(long chatId, Guid transactionId, ReturnTo back, bool confirmDelete, CancellationToken ct)
     {
         _dialogs.Remove(chatId);
 
         var transaction = await _sender.Send(new GetTransactionQuery(chatId, transactionId), ct)
             ?? throw new NotFoundException(nameof(FinanceTransaction), transactionId);
-        await ShowAsync(chatId, FinanceView.TransactionCard(transaction, page, confirmDelete), ct);
+        await ShowAsync(chatId, FinanceView.TransactionCard(transaction, back, confirmDelete), ct);
     }
 
     // ---------- One-click actions ----------
 
-    /// <summary>Deletion from history, already confirmed; a scheduled payment may move back to its date.</summary>
-    public async Task DeleteTransactionAsync(long chatId, Guid transactionId, int page, CancellationToken ct)
+    /// <summary>Deletion from a card, already confirmed; a scheduled payment may move back to its date.</summary>
+    public async Task DeleteTransactionAsync(long chatId, Guid transactionId, ReturnTo back, CancellationToken ct)
     {
         var transaction = await _sender.Send(new GetTransactionQuery(chatId, transactionId), ct);
 
@@ -102,7 +131,7 @@ public class FinanceFlow
             ? FinanceView.DeletedNotice(transaction)
             : FinanceView.GoneNotice;
 
-        await ShowHistoryAsync(chatId, page, notice, ct);
+        await ShowBackAsync(chatId, back, notice, ct);
     }
 
     public async Task UseTemplateAsync(long chatId, Guid templateId, CancellationToken ct)
@@ -125,7 +154,8 @@ public class FinanceFlow
         await ShowTemplatesAsync(chatId, template.Type, FinanceView.TemplateDeletedNotice(template.Title), ct);
     }
 
-    public async Task UndoAsync(long chatId, Guid transactionId, CancellationToken ct)
+    /// <param name="back">The calendar day the transaction was recorded from; null for the main finance screen.</param>
+    public async Task UndoAsync(long chatId, Guid transactionId, ReturnTo? back, CancellationToken ct)
     {
         var transaction = await _sender.Send(new GetTransactionQuery(chatId, transactionId), ct);
 
@@ -133,7 +163,10 @@ public class FinanceFlow
             ? FinanceView.UndoneNotice(transaction)
             : FinanceView.AlreadyUndoneNotice;
 
-        await ShowHomeAsync(chatId, notice, recordedId: null, ct);
+        if (back is null)
+            await ShowHomeAsync(chatId, notice, recordedId: null, ct);
+        else
+            await ShowBackAsync(chatId, back, notice, ct);
     }
 
     // ---------- Dialogs: start ----------
@@ -382,6 +415,14 @@ public class FinanceFlow
         dialog = _dialogs.Get<FinanceDialog>(chatId);
         return dialog is not null && steps.Contains(dialog.Step);
     }
+
+    /// <summary>The screen a card was opened from, with the outcome of what was done on it.</summary>
+    private Task ShowBackAsync(long chatId, ReturnTo back, string? notice, CancellationToken ct) => back switch
+    {
+        ReturnTo.MonthPage page => ShowHistoryAsync(chatId, page.Month, page.Page, notice, ct),
+        ReturnTo.Day day => ShowDayAsync(chatId, day.Date, notice, recordedId: null, ct),
+        _ => ShowHomeAsync(chatId, notice, recordedId: null, ct)
+    };
 
     private async Task<TemplateDetailsDto> GetTemplateAsync(long chatId, Guid templateId, CancellationToken ct) =>
         await _sender.Send(new GetTemplateQuery(chatId, templateId), ct)

@@ -39,11 +39,18 @@ public class FinanceCallbackHandler : ICallbackHandler
                 { Name: Actions.BackToCategories } => _flow.BackToCategoriesAsync(chatId, ct),
                 { Name: Actions.Skip } => _flow.SkipAsync(chatId, ct),
                 { Name: Actions.Cancel } => _flow.CancelAsync(chatId, ct),
-                { Name: Actions.Undo, Id: { } id } => _flow.UndoAsync(chatId, id, ct),
-                { Name: Actions.History, Number: { } page } => _flow.ShowHistoryAsync(chatId, page, notice: null, ct),
-                { Name: Actions.Transaction, TransactionRef: { } tx } => _flow.ShowTransactionAsync(chatId, tx.Id, tx.Page, confirmDelete: false, ct),
-                { Name: Actions.DeleteTransaction, TransactionRef: { } tx } => _flow.ShowTransactionAsync(chatId, tx.Id, tx.Page, confirmDelete: true, ct),
-                { Name: Actions.ConfirmDeleteTransaction, TransactionRef: { } tx } => _flow.DeleteTransactionAsync(chatId, tx.Id, tx.Page, ct),
+                { Name: Actions.Undo, TransactionRef: { } tx } => _flow.UndoAsync(chatId, tx.Id, tx.Back, ct),
+                { Name: Actions.Calendar, Month: { } month } => _flow.ShowCalendarAsync(chatId, month, ct),
+                { Name: Actions.Day, Date: { } date } => _flow.ShowDayAsync(chatId, date, notice: null, recordedId: null, ct),
+                { Name: Actions.History, MonthPage: { } page } => _flow.ShowHistoryAsync(chatId, page.Month, page.Page, notice: null, ct),
+                { Name: Actions.Transaction, TransactionRef: { Back: { } back } tx } =>
+                    _flow.ShowTransactionAsync(chatId, tx.Id, back, confirmDelete: false, ct),
+                { Name: Actions.DeleteTransaction, TransactionRef: { Back: { } back } tx } =>
+                    _flow.ShowTransactionAsync(chatId, tx.Id, back, confirmDelete: true, ct),
+                { Name: Actions.ConfirmDeleteTransaction, TransactionRef: { Back: { } back } tx } =>
+                    _flow.DeleteTransactionAsync(chatId, tx.Id, back, ct),
+                // Weekday names and empty cells of the calendar: the tap is already answered, nothing else to do
+                { Name: Actions.Noop } => Task.CompletedTask,
                 _ => UnknownAsync(chatId, context.Payload, ct)
             });
         }

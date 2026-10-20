@@ -27,11 +27,12 @@ public class PaymentCallbackHandler : ICallbackHandler
             await (action switch
             {
                 { Name: Actions.List } => _flow.ShowListAsync(chatId, notice: null, ct),
-                { Name: Actions.Card, Id: { } id } => _flow.ShowCardAsync(chatId, id, ct),
-                { Name: Actions.Paid, Id: { } id } => _flow.AskPaidAmountAsync(chatId, id, ct),
-                { Name: Actions.PayExpected, Id: { } id } => _flow.PayAsync(chatId, id, amount: null, ct),
-                { Name: Actions.PayOther, Id: { } id } => _flow.StartOtherAmountAsync(chatId, id, ct),
-                { Name: Actions.Delete, Id: { } id } => _flow.DeleteAsync(chatId, id, ct),
+                { Name: Actions.Card, PaymentRef: { } payment } => _flow.ShowCardAsync(chatId, payment.Id, payment.FromDay, ct),
+                { Name: Actions.Paid, PaymentRef: { } payment } => _flow.AskPaidAmountAsync(chatId, payment.Id, payment.FromDay, ct),
+                { Name: Actions.PayExpected, PaymentRef: { } payment } =>
+                    _flow.PayAsync(chatId, payment.Id, amount: null, payment.FromDay, ct),
+                { Name: Actions.PayOther, PaymentRef: { } payment } => _flow.StartOtherAmountAsync(chatId, payment.Id, payment.FromDay, ct),
+                { Name: Actions.Delete, PaymentRef: { } payment } => _flow.DeleteAsync(chatId, payment.Id, payment.FromDay, ct),
                 { Name: Actions.New } => _flow.StartNewAsync(chatId, ct),
                 { Name: Actions.Category, Id: { } id } => _flow.ChooseCategoryAsync(chatId, id, ct),
                 { Name: Actions.NewCategory } => _flow.AskNewCategoryAsync(chatId, ct),
