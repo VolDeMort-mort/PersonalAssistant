@@ -5,7 +5,7 @@ namespace PersonalAssistant.Application.Features.Finance.Commands;
 
 /// <summary>
 /// Undo and deletion from history. The balance follows automatically: it is a sum of transactions.
-/// Undoing a scheduled payment makes it due on its date again.
+/// Undoing a scheduled payment makes it due on its date again; undoing a purchase puts the item back on the shopping list.
 /// Returns false when the transaction is already gone.
 /// </summary>
 public record DeleteTransactionCommand(long ChatId, Guid TransactionId) : IRequest<bool>;
@@ -14,13 +14,15 @@ public class DeleteTransactionCommandHandler : IRequestHandler<DeleteTransaction
 {
     private readonly IFinanceTransactionRepository _transactions;
     private readonly IScheduledPaymentRepository _payments;
+    private readonly IShoppingListRepository _shoppingItems;
     private readonly IUnitOfWork _unitOfWork;
 
     public DeleteTransactionCommandHandler(IFinanceTransactionRepository transactions, IScheduledPaymentRepository payments,
-        IUnitOfWork unitOfWork)
+        IShoppingListRepository shoppingItems, IUnitOfWork unitOfWork)
     {
         _transactions = transactions;
         _payments = payments;
+        _shoppingItems = shoppingItems;
         _unitOfWork = unitOfWork;
     }
 
@@ -36,9 +38,15 @@ public class DeleteTransactionCommandHandler : IRequestHandler<DeleteTransaction
             payment?.RevertPayment(paidForDate);
         }
 
+        if (transaction.ShoppingItemId is { } itemId)
+        {
+            var item = await _shoppingItems.GetByIdAsync(request.ChatId, itemId, cancellationToken);
+            item?.RevertPurchase();
+        }
+
         _transactions.Remove(transaction);
 
-        // The removal and the payment's date go together or not at all
+        // The removal and what it undoes (a payment's date, a bought item) go together or not at all
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }
