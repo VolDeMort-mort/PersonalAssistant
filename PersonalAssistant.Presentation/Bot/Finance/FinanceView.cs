@@ -192,9 +192,13 @@ public static class FinanceView
         var rows = KeyboardLayout
             .Pack(templates.Select(t => Button(WithAmount(t.Title, t.Amount), FinancePayloads.Template(t.Id))))
             .ToList();
-        // Planned expenses are paid from here too, so they live on the expense screen
+        // Planned expenses and the shopping list are paid from here too, so they live on the expense screen
         if (type == TransactionType.Expense)
-            rows.Add(new[] { Button("🧾 Планові витрати", PaymentPayloads.List) });
+            rows.AddRange(KeyboardLayout.Pack(new[]
+            {
+                Button("🧾 Планові витрати", PaymentPayloads.List),
+                Button("🛒 Покупки", ShoppingPayloads.List)
+            }));
         rows.Add(new[]
         {
             Button("✍️ Вручну", FinancePayloads.Manual(type)),
