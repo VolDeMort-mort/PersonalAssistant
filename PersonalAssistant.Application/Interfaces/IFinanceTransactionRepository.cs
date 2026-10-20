@@ -31,6 +31,12 @@ public interface IFinanceTransactionRepository
 
     Task<int> CountAsync(long chatId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken);
 
+    /// <summary>All transactions of the period, newest first, adjustments included: a day or the days of a calendar.</summary>
+    /// <param name="fromUtc">Inclusive.</param>
+    /// <param name="toUtc">Exclusive.</param>
+    Task<IReadOnlyList<FinanceTransaction>> GetForPeriodAsync(long chatId, DateTime fromUtc, DateTime toUtc,
+        CancellationToken cancellationToken);
+
     /// <summary>Categories with the biggest expenses of the period, biggest first; adjustments are not included.</summary>
     Task<IReadOnlyList<CategoryTotal>> GetTopExpenseCategoriesAsync(long chatId, DateTime fromUtc, DateTime toUtc, int take,
         CancellationToken cancellationToken);
