@@ -116,6 +116,9 @@ namespace PersonalAssistant.Infrastructure.Migrations
                     b.Property<Guid?>("ScheduledPaymentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("ShoppingItemId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
@@ -124,6 +127,8 @@ namespace PersonalAssistant.Infrastructure.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("ScheduledPaymentId");
+
+                    b.HasIndex("ShoppingItemId");
 
                     b.HasIndex("ChatId", "CreatedAt");
 
@@ -183,6 +188,45 @@ namespace PersonalAssistant.Infrastructure.Migrations
                     b.HasIndex("ChatId", "IsActive", "NextDueDate");
 
                     b.ToTable("ScheduledPayments");
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.ShoppingItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("BoughtAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("ChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Link")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long?>("Price")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("ChatId", "BoughtAt");
+
+                    b.ToTable("ShoppingItems");
                 });
 
             modelBuilder.Entity("PersonalAssistant.Domain.Entities.JournalEntry", b =>
@@ -339,6 +383,11 @@ namespace PersonalAssistant.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("ScheduledPaymentId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("PersonalAssistant.Domain.Entities.Finance.ShoppingItem", null)
+                        .WithMany()
+                        .HasForeignKey("ShoppingItemId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.ScheduledPayment", b =>
@@ -348,6 +397,14 @@ namespace PersonalAssistant.Infrastructure.Migrations
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PersonalAssistant.Domain.Entities.Finance.ShoppingItem", b =>
+                {
+                    b.HasOne("PersonalAssistant.Domain.Entities.Finance.FinanceCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("PersonalAssistant.Domain.Entities.Planner.PlannerTask", b =>
