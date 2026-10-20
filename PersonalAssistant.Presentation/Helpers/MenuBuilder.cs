@@ -1,4 +1,5 @@
 ﻿using PersonalAssistant.Presentation.Bot.Finance;
+using PersonalAssistant.Presentation.Bot.Planner;
 using PersonalAssistant.Presentation.Constants;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -13,7 +14,7 @@ public static class MenuBuilder
         {
             new[] { InlineKeyboardButton.WithCallbackData("📓 Журнал", BotConstants.Payloads.NavJournal) },
             new[] { InlineKeyboardButton.WithCallbackData("💰 Фінанси", FinancePayloads.Home) },
-            new[] { InlineKeyboardButton.WithCallbackData("📅 Планувальник", BotConstants.Payloads.NavPlanner) },
+            new[] { InlineKeyboardButton.WithCallbackData("📅 Планувальник", PlannerPayloads.Home) },
             new[] { InlineKeyboardButton.WithCallbackData("🌐 Інфа з сайтів", BotConstants.Payloads.NavScraper) }
         });
     }

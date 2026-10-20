@@ -10,6 +10,7 @@ using PersonalAssistant.Presentation.Bot.Options;
 using PersonalAssistant.Presentation.Bot;
 using PersonalAssistant.Presentation.Bot.Handlers;
 using PersonalAssistant.Presentation.Bot.Finance;
+using PersonalAssistant.Presentation.Bot.Planner;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +34,9 @@ builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext
 builder.Services.AddScoped<IFinanceTransactionRepository, FinanceTransactionRepository>();
 builder.Services.AddScoped<IFinanceCatalogRepository, FinanceCatalogRepository>();
 builder.Services.AddScoped<IScheduledPaymentRepository, ScheduledPaymentRepository>();
+builder.Services.AddScoped<IPlannerTaskRepository, PlannerTaskRepository>();
+builder.Services.AddScoped<IPlannerTopicRepository, PlannerTopicRepository>();
+builder.Services.AddScoped<IPlannerSettingsRepository, PlannerSettingsRepository>();
 
 // Clock in the user's time zone (Kyiv)
 builder.Services.AddSingleton<TimeProvider, KyivTimeProvider>();
@@ -65,18 +69,29 @@ builder.Services.AddScoped<IMessageHandler, MenuCommandHandler>();
 builder.Services.AddScoped<IMessageHandler, JournalMessageHandler>();
 builder.Services.AddScoped<IMessageHandler, FinanceInputHandler>();
 builder.Services.AddScoped<IMessageHandler, PaymentInputHandler>();
+builder.Services.AddScoped<IMessageHandler, PlannerInputHandler>();
 builder.Services.AddScoped<ICallbackHandler, NavigationCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, JournalCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, FinanceCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, PaymentCallbackHandler>();
+builder.Services.AddScoped<ICallbackHandler, PlannerCallbackHandler>();
+builder.Services.AddScoped<ICallbackHandler, TaskEditorCallbackHandler>();
 
 // Finance UI: scenarios
 builder.Services.AddScoped<FinanceFlow>();
 builder.Services.AddScoped<PaymentFlow>();
 
+// Planner UI: scenarios
+builder.Services.AddScoped<PlannerFlow>();
+builder.Services.AddScoped<TaskEditorFlow>();
+
 // Payment reminders: the worker (Infrastructure) runs the use case, the notifier (Presentation) sends to Telegram
 builder.Services.AddScoped<IPaymentReminderNotifier, TelegramPaymentReminderNotifier>();
 builder.Services.AddHostedService<PaymentReminderWorker>();
+
+// Planner clock: rolls overdue tasks over, sends reminders and the morning list, the same way
+builder.Services.AddScoped<IPlannerNotifier, TelegramPlannerNotifier>();
+builder.Services.AddHostedService<PlannerWorker>();
 
 
 // Connecting other services

@@ -2,6 +2,7 @@
 using PersonalAssistant.Application.Interfaces;
 using PersonalAssistant.Domain.Entities;
 using PersonalAssistant.Domain.Entities.Finance;
+using PersonalAssistant.Domain.Entities.Planner;
 
 namespace PersonalAssistant.Infrastructure.Persistence;
 
@@ -17,6 +18,9 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<FinanceCategory> FinanceCategories { get; set; }
     public DbSet<FinanceTemplate> FinanceTemplates { get; set; }
     public DbSet<ScheduledPayment> ScheduledPayments { get; set; }
+    public DbSet<PlannerTask> PlannerTasks { get; set; }
+    public DbSet<PlannerTopic> PlannerTopics { get; set; }
+    public DbSet<PlannerSettings> PlannerSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

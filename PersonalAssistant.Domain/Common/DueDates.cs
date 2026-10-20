@@ -1,6 +1,6 @@
-namespace PersonalAssistant.Domain.Entities.Finance;
+namespace PersonalAssistant.Domain.Common;
 
-/// <summary>Calendar rules of scheduled payments.</summary>
+/// <summary>Calendar rules shared by scheduled payments and planner tasks.</summary>
 public static class DueDates
 {
     /// <summary>That day of the month, or its last day when the month is shorter (31 → 30 in April).</summary>
