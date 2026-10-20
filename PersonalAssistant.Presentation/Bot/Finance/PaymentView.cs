@@ -37,10 +37,11 @@ public static class PaymentView
             Button("🔙 Назад", FinancePayloads.Templates(TransactionType.Expense))
         });
 
-        return new BotScreen(ScreenText.Compose("🗓 Планові витрати", body, notice), new InlineKeyboardMarkup(rows));
+        return new BotScreen(ScreenText.Compose("🧾 Планові витрати", body, notice), new InlineKeyboardMarkup(rows));
     }
 
-    public static BotScreen Card(ScheduledPaymentDto payment)
+    /// <param name="fromDay">The calendar day the card was opened from: "🔙" and paying return there.</param>
+    public static BotScreen Card(ScheduledPaymentDto payment, DateOnly? fromDay)
     {
         var body = string.Join('\n',
             $"Сума: <b>{MoneyFormat.Amount(payment.Amount)}</b>",
@@ -53,26 +54,27 @@ public static class PaymentView
         {
             new[]
             {
-                Button("✅ Оплачено", PaymentPayloads.Paid(payment.Id)),
-                Button("🗑 Видалити", PaymentPayloads.Delete(payment.Id))
+                Button("✅ Оплачено", PaymentPayloads.Paid(payment.Id, fromDay)),
+                Button("🗑 Видалити", PaymentPayloads.Delete(payment.Id, fromDay))
             },
-            new[] { Button("🔙 Назад", PaymentPayloads.List) }
+            new[] { Button("🔙 Назад", fromDay is { } day ? FinancePayloads.Day(day) : PaymentPayloads.List) }
         });
 
         return new BotScreen(ScreenText.Compose(payment.Title, body), keyboard);
     }
 
     /// <summary>"✅ Оплачено": the expected amount in one tap, another one is typed.</summary>
-    public static BotScreen PayConfirm(ScheduledPaymentDto payment)
+    /// <param name="fromDay">The calendar day paying was started from.</param>
+    public static BotScreen PayConfirm(ScheduledPaymentDto payment, DateOnly? fromDay)
     {
         var keyboard = new InlineKeyboardMarkup(new[]
         {
             new[]
             {
-                Button($"✅ {MoneyFormat.Amount(payment.Amount)}", PaymentPayloads.PayExpected(payment.Id)),
-                Button("✏️ Інша сума", PaymentPayloads.PayOther(payment.Id))
+                Button($"✅ {MoneyFormat.Amount(payment.Amount)}", PaymentPayloads.PayExpected(payment.Id, fromDay)),
+                Button("✏️ Інша сума", PaymentPayloads.PayOther(payment.Id, fromDay))
             },
-            new[] { Button("🔙 Назад", PaymentPayloads.Card(payment.Id)) }
+            new[] { Button("🔙 Назад", PaymentPayloads.Card(payment.Id, fromDay)) }
         });
 
         return new BotScreen(ScreenText.Compose(payment.Title, "Скільки ви заплатили?"), keyboard);
@@ -105,7 +107,7 @@ public static class PaymentView
             body.Append(draft).Append("\n\n");
         body.Append(Prompt(dialog));
 
-        var title = dialog.IsPaying ? dialog.Title ?? "" : "🗓 Нова планова витрата";
+        var title = dialog.IsPaying ? dialog.Title ?? "" : "🧾 Нова планова витрата";
         return new BotScreen(ScreenText.Compose(title, body.ToString(), error), DialogKeyboard(dialog, categories, today));
     }
 

@@ -51,6 +51,14 @@ public class FinanceTransactionRepository : IFinanceTransactionRepository
     public Task<int> CountAsync(long chatId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken) =>
         InPeriod(chatId, fromUtc, toUtc).CountAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<FinanceTransaction>> GetForPeriodAsync(long chatId, DateTime fromUtc, DateTime toUtc,
+        CancellationToken cancellationToken) =>
+        await InPeriod(chatId, fromUtc, toUtc)
+            .AsNoTracking()
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenBy(t => t.Id)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<CategoryTotal>> GetTopExpenseCategoriesAsync(long chatId, DateTime fromUtc, DateTime toUtc, int take,
         CancellationToken cancellationToken)
     {

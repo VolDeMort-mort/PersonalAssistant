@@ -3,7 +3,7 @@ using PersonalAssistant.Domain.Entities.Finance;
 namespace PersonalAssistant.Presentation.Bot.Finance;
 
 /// <param name="Name">One of <see cref="PaymentPayloads.Actions"/>.</param>
-/// <param name="Arg">Id, number or recurrence code, depending on the action.</param>
+/// <param name="Arg">Id, "id.day", number or recurrence code, depending on the action.</param>
 public record PaymentAction(string Name, string? Arg) : CallbackAction(Name, Arg)
 {
     public Recurrence? Recurrence => Arg switch
@@ -12,6 +12,17 @@ public record PaymentAction(string Name, string? Arg) : CallbackAction(Name, Arg
         "w" => Domain.Entities.Finance.Recurrence.Weekly,
         "m" => Domain.Entities.Finance.Recurrence.Monthly,
         "y" => Domain.Entities.Finance.Recurrence.Yearly,
+        _ => null
+    };
+
+    /// <summary>
+    /// "id" or "id.yyyyMMdd" of the card and paying buttons: the payment, and the calendar day it was opened from
+    /// (null when opened from the list of planned expenses), so "🔙" and paying return there.
+    /// </summary>
+    public (Guid Id, DateOnly? FromDay)? PaymentRef => Arg?.Split('.') switch
+    {
+        [var id] when Guid.TryParseExact(id, "N", out var guid) => (guid, null),
+        [var id, var day] when Guid.TryParseExact(id, "N", out var guid) && ReturnTo.TryParseDay(day, out var date) => (guid, date),
         _ => null
     };
 }
@@ -56,11 +67,12 @@ public static class PaymentPayloads
     public const string Cancel = Prefix + Actions.Cancel;
     public const string ReminderClose = Prefix + Actions.ReminderClose;
 
-    public static string Card(Guid id) => Build(Actions.Card, id.ToString("N"));
-    public static string Paid(Guid id) => Build(Actions.Paid, id.ToString("N"));
-    public static string PayExpected(Guid id) => Build(Actions.PayExpected, id.ToString("N"));
-    public static string PayOther(Guid id) => Build(Actions.PayOther, id.ToString("N"));
-    public static string Delete(Guid id) => Build(Actions.Delete, id.ToString("N"));
+    /// <param name="fromDay">The calendar day the card is opened from; null for the list of planned expenses.</param>
+    public static string Card(Guid id, DateOnly? fromDay = null) => Build(Actions.Card, PaymentRef(id, fromDay));
+    public static string Paid(Guid id, DateOnly? fromDay = null) => Build(Actions.Paid, PaymentRef(id, fromDay));
+    public static string PayExpected(Guid id, DateOnly? fromDay = null) => Build(Actions.PayExpected, PaymentRef(id, fromDay));
+    public static string PayOther(Guid id, DateOnly? fromDay = null) => Build(Actions.PayOther, PaymentRef(id, fromDay));
+    public static string Delete(Guid id, DateOnly? fromDay = null) => Build(Actions.Delete, PaymentRef(id, fromDay));
     public static string Category(Guid id) => Build(Actions.Category, id.ToString("N"));
     public static string ReminderPaid(Guid id) => Build(Actions.ReminderPaid, id.ToString("N"));
     public static string Recurrence(Recurrence recurrence) => Build(Actions.Recurrence, Code(recurrence));
@@ -78,6 +90,10 @@ public static class PaymentPayloads
     }
 
     private static string Build(string action, string arg) => $"{Prefix}{action}:{arg}";
+
+    // "sch:payother:" + 32 + "." + 8 stays under Telegram's 64 bytes
+    private static string PaymentRef(Guid id, DateOnly? fromDay) =>
+        fromDay is { } day ? $"{id:N}.{ReturnTo.FormatDay(day)}" : id.ToString("N");
 
     private static string Code(Recurrence recurrence) => recurrence switch
     {

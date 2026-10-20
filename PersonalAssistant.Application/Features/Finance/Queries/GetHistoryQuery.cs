@@ -6,11 +6,12 @@ using PersonalAssistant.Application.Interfaces;
 namespace PersonalAssistant.Application.Features.Finance.Queries;
 
 /// <summary>
-/// Transactions of the current month, newest first, one page at a time, with the top expense categories.
+/// Transactions of a month, newest first, one page at a time, with the top expense categories.
 /// A page out of range (e.g. after the last item of the last page was deleted) is moved into range.
 /// </summary>
+/// <param name="Month">Any day of the month; the current month when null.</param>
 /// <param name="Page">1-based.</param>
-public record GetHistoryQuery(long ChatId, int Page = 1) : IRequest<HistoryPageDto>;
+public record GetHistoryQuery(long ChatId, DateOnly? Month = null, int Page = 1) : IRequest<HistoryPageDto>;
 
 public class GetHistoryQueryHandler : IRequestHandler<GetHistoryQuery, HistoryPageDto>
 {
@@ -30,7 +31,7 @@ public class GetHistoryQueryHandler : IRequestHandler<GetHistoryQuery, HistoryPa
 
     public async Task<HistoryPageDto> Handle(GetHistoryQuery request, CancellationToken cancellationToken)
     {
-        var month = _time.GetCurrentMonth();
+        var month = request.Month is { } anyDay ? _time.GetMonth(anyDay) : _time.GetCurrentMonth();
 
         var totalCount = await _transactions.CountAsync(request.ChatId, month.FromUtc, month.ToUtc, cancellationToken);
         var pageCount = Math.Max(1, (totalCount + PageSize - 1) / PageSize);
@@ -44,15 +45,14 @@ public class GetHistoryQueryHandler : IRequestHandler<GetHistoryQuery, HistoryPa
 
         var categories = await _catalog.GetAllCategoriesAsync(request.ChatId, cancellationToken);
         var names = categories.ToDictionary(c => c.Id, c => c.Name);
-        string? NameOf(Guid? categoryId) => categoryId is { } id ? names.GetValueOrDefault(id, "—") : null;
 
         return new HistoryPageDto(
             month.Month,
-            transactions.Select(t => TransactionDto.From(t, NameOf(t.CategoryId), _time.ToLocal(t.CreatedAt))).ToList(),
+            await _catalog.ToDtosAsync(request.ChatId, transactions, _time, cancellationToken),
             page,
             pageCount,
             totalCount,
-            top.Select(c => new CategoryTotalDto(NameOf(c.CategoryId)!, c.Total)).ToList(),
+            top.Select(c => new CategoryTotalDto(names.GetValueOrDefault(c.CategoryId, "—"), c.Total)).ToList(),
             totals.Expense);
     }
 }

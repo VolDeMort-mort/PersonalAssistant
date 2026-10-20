@@ -46,38 +46,48 @@ public class PaymentFlow
         await ShowAsync(chatId, PaymentView.List(payments, notice), ct);
     }
 
-    public async Task ShowCardAsync(long chatId, Guid paymentId, CancellationToken ct)
+    /// <param name="fromDay">The calendar day the card is opened from; null for the list of planned expenses.</param>
+    public async Task ShowCardAsync(long chatId, Guid paymentId, DateOnly? fromDay, CancellationToken ct)
     {
         _dialogs.Remove(chatId);
-        await ShowAsync(chatId, PaymentView.Card(await GetPaymentAsync(chatId, paymentId, ct)), ct);
+        await ShowAsync(chatId, PaymentView.Card(await GetPaymentAsync(chatId, paymentId, ct), fromDay), ct);
     }
 
     // ---------- Paying ----------
 
     /// <summary>"✅ Оплачено": asks whether the expected amount was paid.</summary>
-    public async Task AskPaidAmountAsync(long chatId, Guid paymentId, CancellationToken ct)
+    public async Task AskPaidAmountAsync(long chatId, Guid paymentId, DateOnly? fromDay, CancellationToken ct)
     {
         _dialogs.Remove(chatId);
-        await ShowAsync(chatId, PaymentView.PayConfirm(await GetPaymentAsync(chatId, paymentId, ct)), ct);
+        await ShowAsync(chatId, PaymentView.PayConfirm(await GetPaymentAsync(chatId, paymentId, ct), fromDay), ct);
     }
 
     /// <param name="amount">Null pays the expected amount.</param>
-    public async Task PayAsync(long chatId, Guid paymentId, long? amount, CancellationToken ct)
+    /// <param name="fromDay">The calendar day paying was started from; null for the main finance screen.</param>
+    public async Task PayAsync(long chatId, Guid paymentId, long? amount, DateOnly? fromDay, CancellationToken ct)
     {
         var transactionId = await _sender.Send(new PayScheduledPaymentCommand(chatId, paymentId, amount), ct);
 
-        // The dashboard confirms the expense and offers undo, like any other transaction
-        await _finance.ShowHomeAsync(chatId, notice: null, transactionId, ct);
+        // The screen confirms the expense and offers undo, like any other transaction
+        if (fromDay is { } day)
+            await _finance.ShowDayAsync(chatId, day, notice: null, transactionId, ct);
+        else
+            await _finance.ShowHomeAsync(chatId, notice: null, transactionId, ct);
     }
 
-    public async Task StartOtherAmountAsync(long chatId, Guid paymentId, CancellationToken ct) =>
-        await StartDialogAsync(chatId, PaymentDialog.OtherAmount(await GetPaymentAsync(chatId, paymentId, ct)), ct);
+    public async Task StartOtherAmountAsync(long chatId, Guid paymentId, DateOnly? fromDay, CancellationToken ct) =>
+        await StartDialogAsync(chatId, PaymentDialog.OtherAmount(await GetPaymentAsync(chatId, paymentId, ct), fromDay), ct);
 
-    public async Task DeleteAsync(long chatId, Guid paymentId, CancellationToken ct)
+    public async Task DeleteAsync(long chatId, Guid paymentId, DateOnly? fromDay, CancellationToken ct)
     {
         var payment = await GetPaymentAsync(chatId, paymentId, ct);
         await _sender.Send(new DeleteScheduledPaymentCommand(chatId, paymentId), ct);
-        await ShowListAsync(chatId, PaymentView.DeletedNotice(payment.Title), ct);
+
+        var notice = PaymentView.DeletedNotice(payment.Title);
+        if (fromDay is { } day)
+            await _finance.ShowDayAsync(chatId, day, notice, recordedId: null, ct);
+        else
+            await ShowListAsync(chatId, notice, ct);
     }
 
     // ---------- Reminder message ----------
@@ -86,7 +96,7 @@ public class PaymentFlow
     {
         // The reminder goes first: after a restart it may have been taken as the window
         await _messenger.DeleteAsync(chatId, reminderMessageId, ct);
-        await AskPaidAmountAsync(chatId, paymentId, ct);
+        await AskPaidAmountAsync(chatId, paymentId, fromDay: null, ct);
     }
 
     public Task CloseReminderAsync(long chatId, int reminderMessageId, CancellationToken ct) =>
@@ -229,8 +239,8 @@ public class PaymentFlow
 
     public async Task CancelAsync(long chatId, CancellationToken ct)
     {
-        if (_dialogs.Get<PaymentDialog>(chatId)?.PaymentId is { } paymentId)
-            await ShowCardAsync(chatId, paymentId, ct);
+        if (_dialogs.Get<PaymentDialog>(chatId) is { PaymentId: { } paymentId } dialog)
+            await ShowCardAsync(chatId, paymentId, dialog.ReturnToDay, ct);
         else
             await ShowListAsync(chatId, notice: null, ct);
     }
@@ -324,7 +334,7 @@ public class PaymentFlow
             return;
         }
 
-        await PayAsync(chatId, dialog.PaymentId!.Value, amount, ct);
+        await PayAsync(chatId, dialog.PaymentId!.Value, amount, dialog.ReturnToDay, ct);
     }
 
     private async Task OnCategoryChosenAsync(long chatId, PaymentDialog dialog, CategoryDto category, CancellationToken ct)

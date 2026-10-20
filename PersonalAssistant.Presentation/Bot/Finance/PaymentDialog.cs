@@ -50,10 +50,14 @@ public class PaymentDialog : BotDialog
     /// <summary>The payment being paid with another amount.</summary>
     public Guid? PaymentId { get; private init; }
 
+    /// <summary>The calendar day paying was started from: it is shown again once the payment is recorded.</summary>
+    public DateOnly? ReturnToDay { get; private init; }
+
     public bool IsPaying => PaymentId is not null;
 
     public static PaymentDialog NewPayment() => new(PaymentStep.Title);
 
-    public static PaymentDialog OtherAmount(ScheduledPaymentDto payment) =>
-        new(PaymentStep.PaidAmount) { PaymentId = payment.Id, Title = payment.Title };
+    /// <param name="returnToDay">Null returns to the main finance screen.</param>
+    public static PaymentDialog OtherAmount(ScheduledPaymentDto payment, DateOnly? returnToDay) =>
+        new(PaymentStep.PaidAmount) { PaymentId = payment.Id, Title = payment.Title, ReturnToDay = returnToDay };
 }
