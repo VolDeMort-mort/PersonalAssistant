@@ -134,6 +134,8 @@ public static class FinanceView
             + transaction.CreatedAtLocal.ToString("HH:mm", CultureInfo.InvariantCulture));
         if (transaction.IsScheduledPayment)
             lines.Add("🧾 Оплата планової витрати");
+        if (transaction.IsShoppingPurchase)
+            lines.Add("🛒 Покупка зі списку");
         if (transaction.IsAdjustment)
             lines.Add("Не входить у підсумки місяця");
 
@@ -145,6 +147,8 @@ public static class FinanceView
             question = $"🗑 Видалити цю операцію? Баланс зміниться на <b>{MoneyFormat.Signed(balanceChange)}</b>";
             if (transaction.IsScheduledPayment)
                 question += "\nЯкщо це остання оплата планової витрати, її дата повернеться назад";
+            if (transaction.IsShoppingPurchase)
+                question += "\nТовар повернеться в список покупок";
         }
 
         var keyboard = new InlineKeyboardMarkup(new[]
