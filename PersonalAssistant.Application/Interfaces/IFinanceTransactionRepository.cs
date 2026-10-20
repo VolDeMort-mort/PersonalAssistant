@@ -31,6 +31,10 @@ public interface IFinanceTransactionRepository
 
     Task<int> CountAsync(long chatId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken);
 
+    /// <summary>The expenses that bought these shopping list items: what was paid and when.</summary>
+    Task<IReadOnlyList<FinanceTransaction>> GetByShoppingItemsAsync(long chatId, IReadOnlyCollection<Guid> shoppingItemIds,
+        CancellationToken cancellationToken);
+
     /// <summary>All transactions of the period, newest first, adjustments included: a day or the days of a calendar.</summary>
     /// <param name="fromUtc">Inclusive.</param>
     /// <param name="toUtc">Exclusive.</param>
