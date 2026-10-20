@@ -34,6 +34,7 @@ builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext
 builder.Services.AddScoped<IFinanceTransactionRepository, FinanceTransactionRepository>();
 builder.Services.AddScoped<IFinanceCatalogRepository, FinanceCatalogRepository>();
 builder.Services.AddScoped<IScheduledPaymentRepository, ScheduledPaymentRepository>();
+builder.Services.AddScoped<IShoppingListRepository, ShoppingListRepository>();
 builder.Services.AddScoped<IPlannerTaskRepository, PlannerTaskRepository>();
 builder.Services.AddScoped<IPlannerTopicRepository, PlannerTopicRepository>();
 builder.Services.AddScoped<IPlannerSettingsRepository, PlannerSettingsRepository>();

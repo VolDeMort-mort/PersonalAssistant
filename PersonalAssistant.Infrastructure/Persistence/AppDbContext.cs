@@ -18,6 +18,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<FinanceCategory> FinanceCategories { get; set; }
     public DbSet<FinanceTemplate> FinanceTemplates { get; set; }
     public DbSet<ScheduledPayment> ScheduledPayments { get; set; }
+    public DbSet<ShoppingItem> ShoppingItems { get; set; }
     public DbSet<PlannerTask> PlannerTasks { get; set; }
     public DbSet<PlannerTopic> PlannerTopics { get; set; }
     public DbSet<PlannerSettings> PlannerSettings { get; set; }
