@@ -34,6 +34,7 @@ builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext
 builder.Services.AddScoped<IFinanceTransactionRepository, FinanceTransactionRepository>();
 builder.Services.AddScoped<IFinanceCatalogRepository, FinanceCatalogRepository>();
 builder.Services.AddScoped<IScheduledPaymentRepository, ScheduledPaymentRepository>();
+builder.Services.AddScoped<IShoppingListRepository, ShoppingListRepository>();
 builder.Services.AddScoped<IPlannerTaskRepository, PlannerTaskRepository>();
 builder.Services.AddScoped<IPlannerTopicRepository, PlannerTopicRepository>();
 builder.Services.AddScoped<IPlannerSettingsRepository, PlannerSettingsRepository>();
@@ -69,17 +70,21 @@ builder.Services.AddScoped<IMessageHandler, MenuCommandHandler>();
 builder.Services.AddScoped<IMessageHandler, JournalMessageHandler>();
 builder.Services.AddScoped<IMessageHandler, FinanceInputHandler>();
 builder.Services.AddScoped<IMessageHandler, PaymentInputHandler>();
+builder.Services.AddScoped<IMessageHandler, ShoppingInputHandler>();
 builder.Services.AddScoped<IMessageHandler, PlannerInputHandler>();
 builder.Services.AddScoped<ICallbackHandler, NavigationCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, JournalCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, FinanceCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, PaymentCallbackHandler>();
+builder.Services.AddScoped<ICallbackHandler, ShoppingCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, PlannerCallbackHandler>();
 builder.Services.AddScoped<ICallbackHandler, TaskEditorCallbackHandler>();
 
 // Finance UI: scenarios
 builder.Services.AddScoped<FinanceFlow>();
 builder.Services.AddScoped<PaymentFlow>();
+builder.Services.AddScoped<ShoppingFlow>();
+builder.Services.AddScoped<ShoppingEditorFlow>();
 
 // Planner UI: scenarios
 builder.Services.AddScoped<PlannerFlow>();

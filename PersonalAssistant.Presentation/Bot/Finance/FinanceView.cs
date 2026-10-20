@@ -134,6 +134,8 @@ public static class FinanceView
             + transaction.CreatedAtLocal.ToString("HH:mm", CultureInfo.InvariantCulture));
         if (transaction.IsScheduledPayment)
             lines.Add("🧾 Оплата планової витрати");
+        if (transaction.IsShoppingPurchase)
+            lines.Add("🛒 Покупка зі списку");
         if (transaction.IsAdjustment)
             lines.Add("Не входить у підсумки місяця");
 
@@ -145,6 +147,8 @@ public static class FinanceView
             question = $"🗑 Видалити цю операцію? Баланс зміниться на <b>{MoneyFormat.Signed(balanceChange)}</b>";
             if (transaction.IsScheduledPayment)
                 question += "\nЯкщо це остання оплата планової витрати, її дата повернеться назад";
+            if (transaction.IsShoppingPurchase)
+                question += "\nТовар повернеться в список покупок";
         }
 
         var keyboard = new InlineKeyboardMarkup(new[]
@@ -188,9 +192,13 @@ public static class FinanceView
         var rows = KeyboardLayout
             .Pack(templates.Select(t => Button(WithAmount(t.Title, t.Amount), FinancePayloads.Template(t.Id))))
             .ToList();
-        // Planned expenses are paid from here too, so they live on the expense screen
+        // Planned expenses and the shopping list are paid from here too, so they live on the expense screen
         if (type == TransactionType.Expense)
-            rows.Add(new[] { Button("🧾 Планові витрати", PaymentPayloads.List) });
+            rows.AddRange(KeyboardLayout.Pack(new[]
+            {
+                Button("🧾 Планові витрати", PaymentPayloads.List),
+                Button("🛒 Покупки", ShoppingPayloads.List)
+            }));
         rows.Add(new[]
         {
             Button("✍️ Вручну", FinancePayloads.Manual(type)),

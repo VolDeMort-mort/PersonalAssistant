@@ -25,6 +25,12 @@ public class FinanceTransactionConfiguration : IEntityTypeConfiguration<FinanceT
             .HasForeignKey(t => t.ScheduledPaymentId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        // A deleted shopping item keeps its expense, just without the link
+        builder.HasOne<ShoppingItem>()
+            .WithMany()
+            .HasForeignKey(t => t.ShoppingItemId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Monthly totals filter by chat and time range
         builder.HasIndex(t => new { t.ChatId, t.CreatedAt });
     }
